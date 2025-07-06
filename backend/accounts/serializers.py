@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+import re
 
 User = get_user_model()
 
@@ -34,7 +35,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
     
     def validate_username(self, value):
-        # Allow any alphanumeric username, not just email format
         if not value:
             raise serializers.ValidationError("Username is required")
         
@@ -42,9 +42,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already exists")
         
-        # Basic username validation (optional - adjust as needed)
+        # Username validation - only letters, numbers, and underscores
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise serializers.ValidationError("Username can only contain letters, numbers, and underscores")
+        
+        # Basic username length validation
         if len(value) < 3:
             raise serializers.ValidationError("Username must be at least 3 characters long")
+        
+        if len(value) > 150:
+            raise serializers.ValidationError("Username must be 150 characters or fewer")
         
         return value
     
@@ -88,8 +95,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             if User.objects.filter(username=value).exists():
                 raise serializers.ValidationError("Username already exists")
         
-        # Basic username validation
+        # Username validation - only letters, numbers, and underscores
+        if value and not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise serializers.ValidationError("Username can only contain letters, numbers, and underscores")
+        
+        # Basic username length validation
         if value and len(value) < 3:
             raise serializers.ValidationError("Username must be at least 3 characters long")
+        
+        if value and len(value) > 150:
+            raise serializers.ValidationError("Username must be 150 characters or fewer")
         
         return value

@@ -10,14 +10,20 @@ interface AuthState {
     user: any | null;
 }
 
+interface AuthResponse {
+    success: boolean;
+    error?: string;
+    errors?: {[key: string]: string};
+}
+
 interface AuthContextType {
     authState: AuthState;
-    onRegister: (email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
-    onLogin: (loginInput: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    onRegister: (email: string, password: string, username?: string) => Promise<AuthResponse>;
+    onLogin: (loginInput: string, password: string) => Promise<AuthResponse>;
     onLogout: () => Promise<void>;
     refreshAccessToken: () => Promise<boolean>;
-    updateProfile: (data: any) => Promise<{ success: boolean; error?: string }>;
-    deleteAccount: () => Promise<{ success: boolean; error?: string }>;
+    updateProfile: (data: any) => Promise<AuthResponse>;
+    deleteAccount: () => Promise<AuthResponse>;
     fetchProfile: () => Promise<void>;
 }
 
@@ -41,6 +47,70 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+// Helper function to extract meaningful error messages
+const extractErrorMessage = (error: any): { error?: string; errors?: {[key: string]: string} } => {
+    if (error.response?.data) {
+        const data = error.response.data;
+        
+        // If there are field-specific errors
+        if (data.errors) {
+            return { errors: data.errors };
+        }
+        
+        // If there's a general error message
+        if (data.error) {
+            return { error: data.error };
+        }
+        
+        // If there's a message field
+        if (data.message) {
+            return { error: data.message };
+        }
+        
+        // If there are validation errors in a different format
+        if (data.detail) {
+            return { error: data.detail };
+        }
+        
+        // Handle Django REST framework validation errors
+        if (typeof data === 'object' && !Array.isArray(data)) {
+            const fieldErrors: {[key: string]: string} = {};
+            let hasFieldErrors = false;
+            
+            for (const [field, messages] of Object.entries(data)) {
+                if (Array.isArray(messages)) {
+                    fieldErrors[field] = messages[0];
+                    hasFieldErrors = true;
+                } else if (typeof messages === 'string') {
+                    fieldErrors[field] = messages;
+                    hasFieldErrors = true;
+                }
+            }
+            
+            if (hasFieldErrors) {
+                return { errors: fieldErrors };
+            }
+        }
+    }
+    
+    // Default error message based on status code
+    if (error.response?.status === 400) {
+        return { error: "Invalid request. Please check your input." };
+    } else if (error.response?.status === 401) {
+        return { error: "Invalid credentials. Please check your email/username and password." };
+    } else if (error.response?.status === 403) {
+        return { error: "You don't have permission to perform this action." };
+    } else if (error.response?.status === 404) {
+        return { error: "The requested resource was not found." };
+    } else if (error.response?.status === 500) {
+        return { error: "Server error. Please try again later." };
+    } else if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+        return { error: "Network error. Please check your internet connection." };
+    }
+    
+    return { error: error.message || "An unexpected error occurred" };
+};
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [authState, setAuthState] = useState<AuthState>({
@@ -175,7 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, [authState.accessToken, refreshAccessToken]);
 
-    const onRegister = async (email: string, password: string, username?: string): Promise<{ success: boolean; error?: string }> => {
+    const onRegister = async (email: string, password: string, username?: string): Promise<AuthResponse> => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
@@ -208,14 +278,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (error: any) {
             setAuthState(prev => ({ ...prev, loading: false }));
             console.error("Error registering:", error);
+            const errorResult = extractErrorMessage(error);
             return { 
                 success: false, 
-                error: error.response?.data?.error || error.response?.data?.message || "Registration failed" 
+                ...errorResult
             };
         }
     };
 
-    const onLogin = async (loginInput: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const onLogin = async (loginInput: string, password: string): Promise<AuthResponse> => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
@@ -241,14 +312,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (error: any) {
             setAuthState(prev => ({ ...prev, loading: false }));
             console.error("Error logging in:", error);
+            const errorResult = extractErrorMessage(error);
             return { 
                 success: false, 
-                error: error.response?.data?.error || error.response?.data?.message || "Login failed" 
+                ...errorResult
             };
         }
     };
 
-    const updateProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
+    const updateProfile = async (data: any): Promise<AuthResponse> => {
         try {
             const response = await axios.put(`${API_URL}/auth/update/`, data);
             setAuthState(prev => ({
@@ -258,23 +330,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return { success: true };
         } catch (error: any) {
             console.error("Error updating profile:", error);
+            const errorResult = extractErrorMessage(error);
             return { 
                 success: false, 
-                error: error.response?.data?.error || error.response?.data?.message || "Update failed" 
+                ...errorResult
             };
         }
     };
 
-    const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
+    const deleteAccount = async (): Promise<AuthResponse> => {
         try {
             await axios.delete(`${API_URL}/auth/delete/`);
             await onLogout();
             return { success: true };
         } catch (error: any) {
             console.error("Error deleting account:", error);
+            const errorResult = extractErrorMessage(error);
             return { 
                 success: false, 
-                error: error.response?.data?.error || error.response?.data?.message || "Delete failed" 
+                ...errorResult
             };
         }
     };
