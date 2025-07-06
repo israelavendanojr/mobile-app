@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate, get_user_model
 from django.db.models import Q
+from django.db import IntegrityError
 from .serializers import UserRegistrationSerializer, UserSerializer, UserUpdateSerializer
 
 User = get_user_model()
@@ -55,16 +56,45 @@ def register(request):
     """User registration endpoint"""
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save()
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'message': 'User created successfully',
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': UserSerializer(user).data
-        }, status=status.HTTP_201_CREATED)
+        try:
+            user = serializer.save()
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'message': 'User created successfully',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        except IntegrityError as e:
+            # Handle database integrity errors
+            error_message = "A user with this email or username already exists"
+            if 'email' in str(e).lower():
+                error_message = "Email already exists"
+            elif 'username' in str(e).lower():
+                error_message = "Username already exists"
+            
+            return Response({
+                'error': error_message,
+                'details': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': 'Registration failed',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Format validation errors better
+    errors = {}
+    for field, field_errors in serializer.errors.items():
+        if isinstance(field_errors, list):
+            errors[field] = field_errors[0] if field_errors else 'Invalid value'
+        else:
+            errors[field] = str(field_errors)
+    
+    return Response({
+        'error': 'Validation failed',
+        'errors': errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def logout(request):
@@ -81,35 +111,71 @@ def logout(request):
         token.blacklist()
         return Response({'message': 'Successfully logged out'})
         
-    except TokenError:
+    except TokenError as e:
         return Response(
-            {'error': 'Invalid token'}, 
+            {'error': 'Invalid token', 'details': str(e)}, 
             status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {'error': 'Logout failed', 'details': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @api_view(['GET'])
 def profile(request):
     """Get current user profile"""
-    serializer = UserSerializer(request.user)
-    return Response(serializer.data)
+    try:
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response(
+            {'error': 'Failed to fetch profile', 'details': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_user(request):
     """Delete current user account"""
-    user = request.user
-    user.delete()
-    return Response(
-        {'message': 'User account deleted successfully'}, 
-        status=status.HTTP_204_NO_CONTENT
-    )
+    try:
+        user = request.user
+        user.delete()
+        return Response(
+            {'message': 'User account deleted successfully'}, 
+            status=status.HTTP_204_NO_CONTENT
+        )
+    except Exception as e:
+        return Response(
+            {'error': 'Failed to delete account', 'details': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_profile(request):
     """Update current user profile"""
-    serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(UserSerializer(request.user).data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(UserSerializer(request.user).data)
+        
+        # Format validation errors better
+        errors = {}
+        for field, field_errors in serializer.errors.items():
+            if isinstance(field_errors, list):
+                errors[field] = field_errors[0] if field_errors else 'Invalid value'
+            else:
+                errors[field] = str(field_errors)
+        
+        return Response({
+            'error': 'Validation failed',
+            'errors': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        return Response(
+            {'error': 'Failed to update profile', 'details': str(e)}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

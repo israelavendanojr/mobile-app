@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -24,7 +25,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError("Passwords don't match")
+            raise serializers.ValidationError({"password": "Passwords don't match"})
         return attrs
     
     def validate_email(self, value):
@@ -33,17 +34,37 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
     
     def validate_username(self, value):
+        # Allow any alphanumeric username, not just email format
+        if not value:
+            raise serializers.ValidationError("Username is required")
+        
+        # Check if username already exists
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username already exists")
+        
+        # Basic username validation (optional - adjust as needed)
+        if len(value) < 3:
+            raise serializers.ValidationError("Username must be at least 3 characters long")
+        
         return value
     
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
+        try:
+            validated_data.pop('password_confirm')
+            password = validated_data.pop('password')
+            
+            # Create user with the validated data
+            user = User.objects.create_user(
+                email=validated_data['email'],
+                username=validated_data['username'],
+                first_name=validated_data.get('first_name', ''),
+                last_name=validated_data.get('last_name', ''),
+                password=password
+            )
+            
+            return user
+        except Exception as e:
+            raise serializers.ValidationError(f"Error creating user: {str(e)}")
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,4 +87,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         if self.instance and self.instance.username != value:
             if User.objects.filter(username=value).exists():
                 raise serializers.ValidationError("Username already exists")
+        
+        # Basic username validation
+        if value and len(value) < 3:
+            raise serializers.ValidationError("Username must be at least 3 characters long")
+        
         return value
