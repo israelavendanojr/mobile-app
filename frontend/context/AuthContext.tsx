@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 
 interface AuthState {
     accessToken: string | null;
@@ -19,7 +20,7 @@ interface AuthContextType {
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
-export const API_URL = process.env.API_URL;
+export const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const AuthContext = createContext<AuthContextType>({
     authState: { accessToken: null, refreshToken: null, authenticated: null, loading: true },
