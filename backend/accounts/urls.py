@@ -8,4 +8,6 @@ urlpatterns = [
     path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', views.logout, name='logout'),
     path('profile/', views.profile, name='profile'),
+    path('delete/', views.delete_user, name='delete_user'),
+    path('update/', views.update_profile, name='update_profile'),
 ]

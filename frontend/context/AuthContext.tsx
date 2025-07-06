@@ -1,33 +1,43 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
-import Constants from "expo-constants";
 
 interface AuthState {
     accessToken: string | null;
     refreshToken: string | null;
     authenticated: boolean | null;
     loading: boolean;
+    user: any | null;
 }
 
 interface AuthContextType {
     authState: AuthState;
-    onRegister: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-    onLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    onRegister: (email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
+    onLogin: (loginInput: string, password: string) => Promise<{ success: boolean; error?: string }>;
     onLogout: () => Promise<void>;
     refreshAccessToken: () => Promise<boolean>;
+    updateProfile: (data: any) => Promise<{ success: boolean; error?: string }>;
+    deleteAccount: () => Promise<{ success: boolean; error?: string }>;
+    fetchProfile: () => Promise<void>;
 }
 
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
-export const API_URL = Constants.expoConfig?.extra?.API_URL;
+
+// Load API URL from environment variables
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+
+export { API_URL };
 
 const AuthContext = createContext<AuthContextType>({
-    authState: { accessToken: null, refreshToken: null, authenticated: null, loading: true },
+    authState: { accessToken: null, refreshToken: null, authenticated: null, loading: true, user: null },
     onRegister: () => Promise.resolve({ success: false }),
     onLogin: () => Promise.resolve({ success: false }),
     onLogout: () => Promise.resolve(),
     refreshAccessToken: () => Promise.resolve(false),
+    updateProfile: () => Promise.resolve({ success: false }),
+    deleteAccount: () => Promise.resolve({ success: false }),
+    fetchProfile: () => Promise.resolve(),
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -38,7 +48,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         refreshToken: null,
         authenticated: null,
         loading: true,
+        user: null,
     });
+
+    // Fetch user profile
+    const fetchProfile = useCallback(async () => {
+        try {
+            const response = await axios.get(`${API_URL}/auth/profile/`);
+            setAuthState(prev => ({
+                ...prev,
+                user: response.data,
+            }));
+        } catch (error) {
+            console.error("Error fetching profile:", error);
+        }
+    }, []);
 
     // Refresh access token using refresh token
     const refreshAccessToken = useCallback(async (): Promise<boolean> => {
@@ -49,13 +73,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             const response = await axios.post(`${API_URL}/auth/refresh/`, {
-                refresh: refreshToken  // CHANGED: Django Simple JWT expects 'refresh' field
+                refresh: refreshToken
             });
 
-            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
             const { access: accessToken, refresh: newRefreshToken } = response.data;
 
-            // Store new tokens
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
             if (newRefreshToken) {
                 await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, newRefreshToken);
@@ -71,7 +93,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return true;
         } catch (error) {
             console.error("Error refreshing token:", error);
-            // If refresh fails, logout user
             await onLogout();
             return false;
         }
@@ -90,13 +111,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         refreshToken,
                         authenticated: true,
                         loading: false,
+                        user: null,
                     });
+                    // Fetch user profile after setting tokens
+                    setTimeout(fetchProfile, 100);
                 } else {
                     setAuthState({
                         accessToken: null,
                         refreshToken: null,
                         authenticated: false,
                         loading: false,
+                        user: null,
                     });
                 }
             } catch (error) {
@@ -106,11 +131,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     refreshToken: null,
                     authenticated: false,
                     loading: false,
+                    user: null,
                 });
             }
         };
         loadTokens();
-    }, []);
+    }, [fetchProfile]);
 
     // Set up axios interceptors
     useEffect(() => {
@@ -132,10 +158,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 if (error.response?.status === 401 && !originalRequest._retry) {
                     originalRequest._retry = true;
 
-                    // Try to refresh the token
                     const refreshSuccess = await refreshAccessToken();
                     if (refreshSuccess) {
-                        // Retry the original request with new token
                         originalRequest.headers.Authorization = `Bearer ${authState.accessToken}`;
                         return axios(originalRequest);
                     }
@@ -151,21 +175,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, [authState.accessToken, refreshAccessToken]);
 
-    const onRegister = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const onRegister = async (email: string, password: string, username?: string): Promise<{ success: boolean; error?: string }> => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
-            // CHANGED: Added password_confirm field required by Django
-            const response = await axios.post(`${API_URL}/auth/register/`, { 
+            const registerData: any = { 
                 email, 
                 password,
-                password_confirm: password  // Django expects this field
-            });
-            
-            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
-            const { access: accessToken, refresh: refreshToken } = response.data;
+                password_confirm: password
+            };
 
-            // Store tokens
+            if (username) {
+                registerData.username = username;
+            }
+            
+            const response = await axios.post(`${API_URL}/auth/register/`, registerData);
+            
+            const { access: accessToken, refresh: refreshToken, user } = response.data;
+
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
             await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
 
@@ -174,6 +201,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 refreshToken,
                 authenticated: true,
                 loading: false,
+                user,
             });
 
             return { success: true };
@@ -187,17 +215,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    const onLogin = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const onLogin = async (loginInput: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
-            // CHANGED: Added trailing slash to match Django URL pattern
-            const response = await axios.post(`${API_URL}/auth/login/`, { email, password });
+            const response = await axios.post(`${API_URL}/auth/login/`, { 
+                login: loginInput, // This supports both email and username
+                password 
+            });
             
-            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
-            const { access: accessToken, refresh: refreshToken } = response.data;
+            const { access: accessToken, refresh: refreshToken, user } = response.data;
 
-            // Store tokens
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
             await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
 
@@ -206,6 +234,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 refreshToken,
                 authenticated: true,
                 loading: false,
+                user,
             });
 
             return { success: true };
@@ -219,18 +248,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const updateProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const response = await axios.put(`${API_URL}/auth/update-profile/`, data);
+            setAuthState(prev => ({
+                ...prev,
+                user: response.data,
+            }));
+            return { success: true };
+        } catch (error: any) {
+            console.error("Error updating profile:", error);
+            return { 
+                success: false, 
+                error: error.response?.data?.error || error.response?.data?.message || "Update failed" 
+            };
+        }
+    };
+
+    const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
+        try {
+            await axios.delete(`${API_URL}/auth/delete-user/`);
+            await onLogout();
+            return { success: true };
+        } catch (error: any) {
+            console.error("Error deleting account:", error);
+            return { 
+                success: false, 
+                error: error.response?.data?.error || error.response?.data?.message || "Delete failed" 
+            };
+        }
+    };
+
     const onLogout = async (): Promise<void> => {
         try {
-            // CHANGED: Call logout endpoint to invalidate refresh token on server
             if (authState.refreshToken) {
                 await axios.post(`${API_URL}/auth/logout/`, {
-                    refresh: authState.refreshToken  // CHANGED: Django expects 'refresh' field
+                    refresh: authState.refreshToken
                 });
             }
         } catch (error) {
             console.error("Error during logout:", error);
         } finally {
-            // Clear tokens regardless of server response
             await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
             await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
             delete axios.defaults.headers.common['Authorization'];
@@ -240,12 +298,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 refreshToken: null,
                 authenticated: false,
                 loading: false,
+                user: null,
             });
         }
     };
 
     return (
-        <AuthContext.Provider value={{ authState, onRegister, onLogin, onLogout, refreshAccessToken }}>
+        <AuthContext.Provider value={{ 
+            authState, 
+            onRegister, 
+            onLogin, 
+            onLogout, 
+            refreshAccessToken,
+            updateProfile,
+            deleteAccount,
+            fetchProfile
+        }}>
             {children}
         </AuthContext.Provider>
     );

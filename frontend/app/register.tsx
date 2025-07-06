@@ -6,6 +6,7 @@ import { Redirect } from 'expo-router';
 
 export default function Register() {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const { onRegister, authState } = useAuth();
@@ -26,7 +27,7 @@ export default function Register() {
   }
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!email || !username || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -36,7 +37,7 @@ export default function Register() {
       return;
     }
 
-    const result = await onRegister(email, password);
+    const result = await onRegister(email, password, username);
     if (result.success) {
       router.replace('/');
     } else {
@@ -53,6 +54,14 @@ export default function Register() {
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
+        autoCapitalize="none"
+        editable={!authState.loading}
+      />
+      <TextInput
+        className="border border-gray-300 p-2 mb-4 w-full rounded"
+        placeholder="Username"
+        value={username}
+        onChangeText={setUsername}
         autoCapitalize="none"
         editable={!authState.loading}
       />

@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Redirect } from 'expo-router';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const { onLogin, authState } = useAuth();
 
@@ -25,12 +25,12 @@ export default function Login() {
   }
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!loginInput || !password) {
+      Alert.alert('Error', 'Please enter both email/username and password');
       return;
     }
 
-    const result = await onLogin(email, password);
+    const result = await onLogin(loginInput, password);
     if (result.success) {
       router.replace('/');
     } else {
@@ -43,10 +43,9 @@ export default function Login() {
       <Text className="text-2xl font-bold mb-4">Login</Text>
       <TextInput
         className="border border-gray-300 p-2 mb-4 w-full rounded"
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
+        placeholder="Email or Username"
+        value={loginInput}
+        onChangeText={setLoginInput}
         autoCapitalize="none"
         editable={!authState.loading}
       />
