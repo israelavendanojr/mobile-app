@@ -1,7 +1,6 @@
-// components/ProtectedRoute.tsx
 import { useAuth } from '../context/AuthContext';
 import { Redirect } from 'expo-router';
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,17 +15,18 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { authState } = useAuth();
 
-  // Show loading while checking auth
-  if (authState?.authenticated === null) {
+  // Show loading while checking auth or during token refresh
+  if (authState.loading || authState.authenticated === null) {
     return fallback || (
       <View className="flex-1 items-center justify-center bg-white">
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text className="mt-2">Loading...</Text>
       </View>
     );
   }
 
   // Redirect if not authenticated
-  if (!authState?.authenticated) {
+  if (!authState.authenticated) {
     return <Redirect href={redirectTo} />;
   }
 

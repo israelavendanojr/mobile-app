@@ -22,6 +22,13 @@ export default function RootLayout() {
             gestureEnabled: false
           }} 
         />
+        <Stack.Screen 
+          name="register" 
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false
+          }} 
+        />
         {/* Add other screens here */}
         <Stack.Screen 
           name="profile" 

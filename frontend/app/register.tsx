@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { router } from 'expo-router';
 import { Redirect } from 'expo-router';
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { onLogin, authState } = useAuth();
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const { onRegister, authState } = useAuth();
 
   // Show loading while checking initial auth state
   if (authState.loading) {
@@ -24,23 +25,28 @@ export default function Login() {
     return <Redirect href="/" />;
   }
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    const result = await onLogin(email, password);
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    const result = await onRegister(email, password);
     if (result.success) {
       router.replace('/');
     } else {
-      Alert.alert('Login Failed', result.error || 'Please try again');
+      Alert.alert('Registration Failed', result.error || 'Please try again');
     }
   };
 
   return (
     <View className="flex-1 items-center justify-center bg-white p-4">
-      <Text className="text-2xl font-bold mb-4">Login</Text>
+      <Text className="text-2xl font-bold mb-4">Register</Text>
       <TextInput
         className="border border-gray-300 p-2 mb-4 w-full rounded"
         placeholder="Email"
@@ -58,15 +64,23 @@ export default function Login() {
         secureTextEntry
         editable={!authState.loading}
       />
+      <TextInput
+        className="border border-gray-300 p-2 mb-4 w-full rounded"
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+        editable={!authState.loading}
+      />
       
       {authState.loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <>
-          <Button title="Login" onPress={handleLogin} />
+          <Button title="Register" onPress={handleRegister} />
           <Button 
-            title="Don't have an account? Register" 
-            onPress={() => router.push('/register')} 
+            title="Already have an account? Login" 
+            onPress={() => router.push('/login')} 
           />
         </>
       )}
