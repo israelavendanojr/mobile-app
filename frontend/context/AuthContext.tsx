@@ -250,7 +250,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updateProfile = async (data: any): Promise<{ success: boolean; error?: string }> => {
         try {
-            const response = await axios.put(`${API_URL}/auth/update-profile/`, data);
+            const response = await axios.put(`${API_URL}/auth/update/`, data);
             setAuthState(prev => ({
                 ...prev,
                 user: response.data,
@@ -267,7 +267,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
         try {
-            await axios.delete(`${API_URL}/auth/delete-user/`);
+            await axios.delete(`${API_URL}/auth/delete/`);
             await onLogout();
             return { success: true };
         } catch (error: any) {
