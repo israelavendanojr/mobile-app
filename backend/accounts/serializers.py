@@ -83,27 +83,48 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         }
     
     def validate_email(self, value):
+        # Don't validate if email is empty or None
+        if not value:
+            return value
+            
         # Only check if email already exists if it's being changed to a different value
         if self.instance and self.instance.email != value:
-            if User.objects.filter(email=value).exclude(pk=self.instance.pk).exists():
+            if User.objects.filter(email=value).exists():
                 raise serializers.ValidationError("Email already exists")
+        elif not self.instance:
+            # New user case (shouldn't happen in update, but just in case)
+            if User.objects.filter(email=value).exists():
+                raise serializers.ValidationError("Email already exists")
+        
         return value
 
     def validate_username(self, value):
-        # Only check if username already exists if it's being changed to a different value
-        if self.instance and self.instance.username != value:
-            if User.objects.filter(username=value).exclude(pk=self.instance.pk).exists():
-                raise serializers.ValidationError("Username already exists")
+        print("Received username:", value)
+        print("Current instance username:", self.instance.username if self.instance else None)
+        print("Username already exists:", User.objects.filter(username=value).exists())
         
+        # Don't validate if username is empty or None
+        if not value:
+            return value
+            
         # Username validation - only letters, numbers, and underscores
-        if value and not re.match(r'^[a-zA-Z0-9_]+$', value):
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError("Username can only contain letters, numbers, and underscores")
         
         # Basic username length validation
-        if value and len(value) < 3:
+        if len(value) < 3:
             raise serializers.ValidationError("Username must be at least 3 characters long")
         
-        if value and len(value) > 150:
+        if len(value) > 150:
             raise serializers.ValidationError("Username must be 150 characters or fewer")
+        
+        # Only check if username already exists if it's being changed to a different value
+        if self.instance and self.instance.username != value:
+            if User.objects.filter(username=value).exists():
+                raise serializers.ValidationError("Username already exists")
+        elif not self.instance:
+            # New user case (shouldn't happen in update, but just in case)
+            if User.objects.filter(username=value).exists():
+                raise serializers.ValidationError("Username already exists")
         
         return value

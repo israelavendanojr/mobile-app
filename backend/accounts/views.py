@@ -97,6 +97,7 @@ def register(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def logout(request):
     """Logout endpoint - blacklists the refresh token"""
     try:
@@ -123,6 +124,7 @@ def logout(request):
         )
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def profile(request):
     """Get current user profile"""
     try:
@@ -156,11 +158,6 @@ def delete_user(request):
 def update_profile(request):
     """Update current user profile"""
     try:
-        # Add debugging
-        print(f"User: {request.user}")
-        print(f"Request data: {request.data}")
-        print(f"User authenticated: {request.user.is_authenticated}")
-        
         if not request.user.is_authenticated:
             return Response(
                 {'error': 'Authentication required'}, 
@@ -169,17 +166,26 @@ def update_profile(request):
         
         serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
-            user = serializer.save()
-            print(f"User saved successfully: {user.email}")
-            return Response(UserSerializer(user).data)
-        else:
-            print(f"Serializer errors: {serializer.errors}")
+            try:
+                user = serializer.save()
+                return Response(UserSerializer(user).data)
+            except IntegrityError as e:
+                # Handle database integrity errors
+                error_message = "A user with this email or username already exists"
+                if 'email' in str(e).lower():
+                    error_message = "Email already exists"
+                elif 'username' in str(e).lower():
+                    error_message = "Username already exists"
+                
+                return Response({
+                    'error': error_message
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Format validation errors better
         errors = {}
         for field, field_errors in serializer.errors.items():
             if isinstance(field_errors, list):
-                errors[field] = field_errors[0] if field_errors else 'Invalid value'
+                errors[field] = field_errors if isinstance(field_errors, list) else [str(field_errors)]
             else:
                 errors[field] = str(field_errors)
         
@@ -189,7 +195,6 @@ def update_profile(request):
         }, status=status.HTTP_400_BAD_REQUEST)
         
     except Exception as e:
-        print(f"Exception in update_profile: {e}")
         return Response(
             {'error': 'Failed to update profile', 'details': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
