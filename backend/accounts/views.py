@@ -156,10 +156,24 @@ def delete_user(request):
 def update_profile(request):
     """Update current user profile"""
     try:
+        # Add debugging
+        print(f"User: {request.user}")
+        print(f"Request data: {request.data}")
+        print(f"User authenticated: {request.user.is_authenticated}")
+        
+        if not request.user.is_authenticated:
+            return Response(
+                {'error': 'Authentication required'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         serializer = UserUpdateSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()
-            return Response(UserSerializer(request.user).data)
+            user = serializer.save()
+            print(f"User saved successfully: {user.email}")
+            return Response(UserSerializer(user).data)
+        else:
+            print(f"Serializer errors: {serializer.errors}")
         
         # Format validation errors better
         errors = {}
@@ -175,6 +189,7 @@ def update_profile(request):
         }, status=status.HTTP_400_BAD_REQUEST)
         
     except Exception as e:
+        print(f"Exception in update_profile: {e}")
         return Response(
             {'error': 'Failed to update profile', 'details': str(e)}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR

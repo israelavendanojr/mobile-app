@@ -83,16 +83,16 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         }
     
     def validate_email(self, value):
-        # Check if email is being changed and if it already exists
+        # Only check if email already exists if it's being changed to a different value
         if self.instance and self.instance.email != value:
-            if User.objects.filter(email=value).exists():
+            if User.objects.filter(email=value).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError("Email already exists")
         return value
-    
+
     def validate_username(self, value):
-        # Check if username is being changed and if it already exists
+        # Only check if username already exists if it's being changed to a different value
         if self.instance and self.instance.username != value:
-            if User.objects.filter(username=value).exists():
+            if User.objects.filter(username=value).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError("Username already exists")
         
         # Username validation - only letters, numbers, and underscores
