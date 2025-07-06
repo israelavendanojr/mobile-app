@@ -1,44 +1,35 @@
 // app/_layout.tsx
-import { Redirect, Stack } from 'expo-router';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { Stack } from 'expo-router';
+import { AuthProvider } from '../context/AuthContext';
+import '@/global.css';
 
-// This gate checks auth after AuthProvider is mounted
-function AuthGate() {
-  const { authState } = useAuth();
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    if (authState?.authenticated !== null) {
-      setChecking(false);
-    }
-  }, [authState]);
-
-  if (checking) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (!authState?.authenticated) {
-    return <Redirect href="/login" />;
-  }
-
-  return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-    </Stack>
-  );
-}
-
-// Wrap the gate in the provider
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <AuthGate />
+      <Stack>
+        <Stack.Screen 
+          name="index" 
+          options={{ 
+            headerShown: false, 
+            title: 'Home' 
+          }} 
+        />
+        <Stack.Screen 
+          name="login" 
+          options={{ 
+            headerShown: false,
+            // Prevent going back to protected screens
+            gestureEnabled: false
+          }} 
+        />
+        {/* Add other screens here */}
+        <Stack.Screen 
+          name="profile" 
+          options={{ 
+            title: 'Profile' 
+          }} 
+        />
+      </Stack>
     </AuthProvider>
   );
 }
