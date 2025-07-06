@@ -47,11 +47,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return false;
             }
 
-            const response = await axios.post(`${API_URL}/auth/refresh`, {
-                refreshToken: refreshToken
+            const response = await axios.post(`${API_URL}/auth/refresh/`, {
+                refresh: refreshToken  // CHANGED: Django Simple JWT expects 'refresh' field
             });
 
-            const { accessToken, refreshToken: newRefreshToken } = response.data;
+            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
+            const { access: accessToken, refresh: newRefreshToken } = response.data;
 
             // Store new tokens
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
@@ -153,8 +154,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
-            const response = await axios.post(`${API_URL}/auth/register`, { email, password });
-            const { accessToken, refreshToken } = response.data;
+            // CHANGED: Added password_confirm field required by Django
+            const response = await axios.post(`${API_URL}/auth/register/`, { 
+                email, 
+                password,
+                password_confirm: password  // Django expects this field
+            });
+            
+            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
+            const { access: accessToken, refresh: refreshToken } = response.data;
 
             // Store tokens
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
@@ -173,7 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error("Error registering:", error);
             return { 
                 success: false, 
-                error: error.response?.data?.message || "Registration failed" 
+                error: error.response?.data?.error || error.response?.data?.message || "Registration failed" 
             };
         }
     };
@@ -182,8 +190,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             setAuthState(prev => ({ ...prev, loading: true }));
             
-            const response = await axios.post(`${API_URL}/auth/login`, { email, password });
-            const { accessToken, refreshToken } = response.data;
+            // CHANGED: Added trailing slash to match Django URL pattern
+            const response = await axios.post(`${API_URL}/auth/login/`, { email, password });
+            
+            // CHANGED: Django Simple JWT returns 'access' and 'refresh' fields
+            const { access: accessToken, refresh: refreshToken } = response.data;
 
             // Store tokens
             await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
@@ -202,17 +213,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error("Error logging in:", error);
             return { 
                 success: false, 
-                error: error.response?.data?.message || "Login failed" 
+                error: error.response?.data?.error || error.response?.data?.message || "Login failed" 
             };
         }
     };
 
     const onLogout = async (): Promise<void> => {
         try {
-            // Optional: Call logout endpoint to invalidate refresh token on server
+            // CHANGED: Call logout endpoint to invalidate refresh token on server
             if (authState.refreshToken) {
-                await axios.post(`${API_URL}/auth/logout`, {
-                    refreshToken: authState.refreshToken
+                await axios.post(`${API_URL}/auth/logout/`, {
+                    refresh: authState.refreshToken  // CHANGED: Django expects 'refresh' field
                 });
             }
         } catch (error) {
