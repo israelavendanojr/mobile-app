@@ -17,6 +17,9 @@ export default {
     },
     ios: {
       supportsTablet: true,
+      config: {
+        "useNonExemptEncryption": false,
+      }
     },
     android: {
       adaptiveIcon: {
