@@ -1,6 +1,10 @@
-from training.models import ExerciseMovement, WorkoutSplitTemplate
+import random
+from training.models import ExerciseMovement, WorkoutSplitTemplate, ExerciseType
 
-def attach_exercise(preferences, pattern, used_exercises=set()):
+def attach_exercise(preferences, pattern, used_exercises=None):
+    if used_exercises is None:
+        used_exercises = set()
+
     available_equipment = preferences.equipment.values_list('name', flat=True)
 
     # Filter exercises by pattern, equipment, and exclude already used exercises
@@ -11,10 +15,34 @@ def attach_exercise(preferences, pattern, used_exercises=set()):
     if not candidates.exists():
         return None 
 
-    chosen = candidates.order_by('?').first() # Pick one at random
+    return candidates.order_by('?').first()
 
-    return chosen
-     
+def decide_sets_and_reps(exercise, volume):
+    if not exercise or not hasattr(exercise, "type"):
+        return (2, 8, 10)  # fallback if exercise or type is missing
+
+    roll = random.randint(1, 2)
+
+    if volume == "low":
+        if exercise.type == ExerciseType.COMPOUND:
+            return (2, 4, 6) if roll == 1 else (2, 6, 8)
+        else:  # ISOLATION
+            return (2, 6, 8) if roll == 1 else (1, 8, 10)
+
+    elif volume == "moderate":
+        if exercise.type == ExerciseType.COMPOUND:
+            return (3, 6, 10) if roll == 1 else (3, 8, 12)
+        else:
+            return (2, 8, 10) if roll == 1 else (3, 8, 12)
+
+    elif volume == "high":
+        if exercise.type == ExerciseType.COMPOUND:
+            return (4, 8, 12) if roll == 1 else (3, 10, 15)
+        else:
+            return (3, 8, 12) if roll == 1 else (3, 10, 15)
+
+    return (2, 8, 10)  # final fallback
+
 def generate_day(preferences, workout_day_template):
     patterns = workout_day_template.patterns.all()
     used_exercises = set()
@@ -24,12 +52,13 @@ def generate_day(preferences, workout_day_template):
         exercise = attach_exercise(preferences, pattern, used_exercises)
         if exercise:
             used_exercises.add(exercise)
+            sets, start_reps, end_reps = decide_sets_and_reps(exercise, preferences.volume)
             day_plan.append({
                 "exercise": exercise,
                 "exercise_name": exercise.name,
-                "sets": 2,
-                "start_reps": 6,
-                "end_reps": 8,
+                "sets": sets,
+                "start_reps": start_reps,
+                "end_reps": end_reps,
             })
         else:
             day_plan.append({
@@ -40,9 +69,9 @@ def generate_day(preferences, workout_day_template):
 
     return day_plan
 
-    
 def decide_split(preferences):
     return WorkoutSplitTemplate.objects.filter(days_per_week=preferences.days_per_week).first()
 
 def generate_plan(preferences):
-    pass 
+    # Placeholder for now – you’ll likely iterate workout_day_template over split
+    pass

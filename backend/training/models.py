@@ -15,6 +15,10 @@ class Equipment(models.Model):
     def __str__(self):
         return self.name
 
+class ExerciseType(models.TextChoices):
+    COMPOUND = "compound", "Compound"
+    ISOLATION = "isolation", "Isolation"
+
 # Generation models
 class ExercisePattern(models.Model):
     name = models.CharField(max_length=100)  # e.g., "Vertical Pull"
@@ -27,6 +31,7 @@ class ExerciseMovement(models.Model):
     pattern = models.ForeignKey(ExercisePattern, on_delete=models.CASCADE, related_name="movements")
     name = models.CharField(max_length=100) # e.g., "Pull-up"
     equipment = models.ManyToManyField(Equipment)
+    type = models.CharField(max_length=100, choices=ExerciseType.choices)
     
     def __str__(self):
         return self.name
