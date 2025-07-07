@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { router } from "expo-router";
 import api from "../api/api";
+import { useAuth } from "./AuthContext";
 
 interface OnboardingPreferences {
   days_per_week: number;
@@ -48,6 +49,7 @@ export const useOnboarding = () => {
 };
 
 export const OnboardingProvider = ({ children }: { children: React.ReactNode }) => {
+  const { authState } = useAuth();
   const [state, setState] = useState<OnboardingState>({
     preferences: {},
     currentStep: 0,
@@ -81,11 +83,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
-  // Initialize by fetching reference data
+  // Initialize by fetching reference data only when user is authenticated
   useEffect(() => {
-    fetchMuscles();
-    fetchEquipment();
-  }, [fetchMuscles, fetchEquipment]);
+    if (authState.authenticated && authState.user) {
+      fetchMuscles();
+      fetchEquipment();
+    }
+  }, [authState.authenticated, authState.user, fetchMuscles, fetchEquipment]);
 
   const updatePreferences = useCallback((preferences: Partial<OnboardingPreferences>) => {
     setState(prev => ({
@@ -102,7 +106,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       // Navigate to appropriate route
       switch (newStep) {
         case 0:
-          router.push('/onboarding/');
+          router.push('/onboarding/welcome');
           break;
         case 1:
           router.push('/onboarding/preferences');
@@ -125,7 +129,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       // Navigate to appropriate route
       switch (newStep) {
         case 0:
-          router.push('/onboarding/');
+          router.push('/onboarding/welcome');
           break;
         case 1:
           router.push('/onboarding/preferences');
@@ -147,7 +151,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     // Navigate to appropriate route
     switch (step) {
       case 0:
-        router.push('/onboarding/');
+        router.push('/onboarding/welcome');
         break;
       case 1:
         router.push('/onboarding/preferences');
