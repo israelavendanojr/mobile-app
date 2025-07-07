@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Button, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { useAuth } from '../context/AuthContext';
-import ProtectedRoute from '../components/ProtectedRoute';
+import { useAuth } from '../../context/AuthContext';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function Profile() {
   const { authState, updateProfile, deleteAccount, onLogout } = useAuth();
