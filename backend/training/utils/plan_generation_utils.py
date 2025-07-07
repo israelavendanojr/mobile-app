@@ -94,3 +94,28 @@ def generate_plan(preferences):
     return plan
 
     
+def save_generated_plan(user, plan_dict):
+    plan = WorkoutPlan.objects.create(
+        user=user,
+        name=plan_dict["name"],
+        days_per_week=plan_dict["days_per_week"]
+    )
+
+    for index, day in enumerate(plan_dict["days"]):
+        workout_day = WorkoutDay.objects.create(
+            plan=plan,
+            day_name=day["day_name"],
+            order=index
+        )
+
+        for ex in day["exercises"]:
+            LoggedExercise.objects.create(
+                day=workout_day,
+                name=ex["exercise_name"],
+                sets=ex.get("sets", 0),
+                start_reps=ex.get("start_reps", 0),
+                end_reps=ex.get("end_reps", 0),
+                skip=ex.get("skip", False)
+            )
+
+    return plan

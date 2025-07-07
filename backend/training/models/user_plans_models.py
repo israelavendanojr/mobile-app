@@ -14,7 +14,7 @@ class WorkoutDay(models.Model):
     day_name = models.CharField(max_length=100)
     order = models.IntegerField()
 
-class LoggedExercise(models.Model):
+class PlannedExercise(models.Model):
     day = models.ForeignKey(WorkoutDay, on_delete=models.CASCADE, related_name="exercises")
     name = models.CharField(max_length=100)
     sets = models.IntegerField()
