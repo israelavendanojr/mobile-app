@@ -1,5 +1,4 @@
-
-from training.models import ExerciseMovement, Equipment
+from training.models import ExerciseMovement, WorkoutSplitTemplate
 
 def attach_exercise(preferences, pattern, used_exercises=set()):
     available_equipment = preferences.equipment.values_list('name', flat=True)
@@ -43,7 +42,7 @@ def generate_day(preferences, workout_day_template):
 
     
 def decide_split(preferences):
-    pass
+    return WorkoutSplitTemplate.objects.filter(days_per_week=preferences.days_per_week).first()
 
 def generate_plan(preferences):
     pass 

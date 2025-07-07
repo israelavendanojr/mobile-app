@@ -1,9 +1,10 @@
 from django.test import TestCase
 from training.models import (
     WorkoutDayTemplate, ExercisePattern, ExerciseMovement,
-    Equipment, Muscle, UserPreferences, DayPatternThrough
+    Equipment, Muscle, UserPreferences, DayPatternThrough, 
+    WorkoutSplitTemplate, SplitDayThrough
 )
-from training.utils.plan_generation_utils import generate_day
+from training.utils.plan_generation_utils import generate_day, decide_split
 from django.contrib.auth import get_user_model
 
 class ManualDBTestCase(TestCase):
@@ -64,7 +65,7 @@ class ManualDBTestCase(TestCase):
         ExerciseMovement.objects.create(name="Barbell RDL", pattern=self.rdl_pattern).equipment.add(self.barbell)
         ExerciseMovement.objects.create(name="Dumbbell Calf Raise", pattern=self.calf_pattern).equipment.add(self.dumbbell)
 
-
+    # Template Tests
     def create_day_template(self, name, patterns_in_order):
         template = WorkoutDayTemplate.objects.create(name=name)
         for index, pattern in enumerate(patterns_in_order):
@@ -75,6 +76,7 @@ class ManualDBTestCase(TestCase):
             )
         return template
 
+    # Generate Day Tests
     def test_push_day(self):
         day_plan = generate_day(self.pref, self.create_day_template("Push", [self.h_push]))
         self.assertEqual(len(day_plan), 1)
@@ -95,3 +97,51 @@ class ManualDBTestCase(TestCase):
         expected_names = {"Barbell Squat", "Barbell RDL", "Dumbbell Calf Raise"}
         self.assertEqual(len(day_plan), 3)
         self.assertEqual(set(ex["exercise_name"] for ex in day_plan), expected_names)
+
+    # Decide Split Tests
+    def test_6_day_pplppl_split(self):
+        # Create day templates
+        push = WorkoutDayTemplate.objects.create(name="Push")
+        pull = WorkoutDayTemplate.objects.create(name="Pull")
+        legs = WorkoutDayTemplate.objects.create(name="Legs")
+
+        # Create a 6-day split: P-P-L-P-P-L
+        split = WorkoutSplitTemplate.objects.create(name="PPLPPL", days_per_week=6)
+        SplitDayThrough.objects.create(split=split, day_template=push, day_index=0)
+        SplitDayThrough.objects.create(split=split, day_template=pull, day_index=1)
+        SplitDayThrough.objects.create(split=split, day_template=legs, day_index=2)
+        SplitDayThrough.objects.create(split=split, day_template=push, day_index=3)
+        SplitDayThrough.objects.create(split=split, day_template=pull, day_index=4)
+        SplitDayThrough.objects.create(split=split, day_template=legs, day_index=5)
+
+        # Match user preference
+        self.pref.days_per_week = 6
+        self.pref.save()
+
+        result = decide_split(self.pref)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.name, "PPLPPL")
+        self.assertEqual(result.days_per_week, 6)
+
+        # check that day order is correct
+        day_names = [d.name for d in result.workouts.order_by('splitdaythrough__day_index')]
+        self.assertEqual(day_names, ["Push", "Pull", "Legs", "Push", "Pull", "Legs"])
+
+    def test_2_day_full_body_split(self):
+        # Create day templates
+        full_a = WorkoutDayTemplate.objects.create(name="Full Body A")
+        full_b = WorkoutDayTemplate.objects.create(name="Full Body B")
+
+        # Create 2-day split
+        split = WorkoutSplitTemplate.objects.create(name="2-Day Full Body", days_per_week=2)
+        SplitDayThrough.objects.create(split=split, day_template=full_a, day_index=0)
+        SplitDayThrough.objects.create(split=split, day_template=full_b, day_index=1)
+
+        # Make sure preferences match
+        self.pref.days_per_week = 2
+        self.pref.save()
+
+        result = decide_split(self.pref)
+        self.assertIsNotNone(result)
+        self.assertEqual(result.name, "2-Day Full Body")
+        self.assertEqual(result.days_per_week, 2)
