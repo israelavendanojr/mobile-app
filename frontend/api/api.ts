@@ -1,20 +1,14 @@
+// api/api.ts
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-// Create a custom axios instance
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:8000',
 });
 
-// Automatically attach JWT token from SecureStore if available
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('token');
+    const token = await SecureStore.getItemAsync('access');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

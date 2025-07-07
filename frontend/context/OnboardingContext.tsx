@@ -62,7 +62,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   // Fetch muscles from API
   const fetchMuscles = useCallback(async () => {
     try {
-      const response = await api.get('/muscles/');
+      const response = await api.get('/api/muscles/');
       setState(prev => ({ ...prev, muscles: response.data }));
     } catch (error) {
       console.error('Error fetching muscles:', error);
@@ -73,7 +73,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   // Fetch equipment from API
   const fetchEquipment = useCallback(async () => {
     try {
-      const response = await api.get('/equipment/');
+      const response = await api.get('/api/equipment/');
       setState(prev => ({ ...prev, equipmentOptions: response.data }));
     } catch (error) {
       console.error('Error fetching equipment:', error);
@@ -172,7 +172,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         return false;
       }
 
-      const response = await api.post('/training/api/plan/preview/', {
+      const response = await api.post('/api/plan/preview/', {
         days_per_week: preferences.days_per_week,
         training_age: preferences.training_age,
         volume: preferences.volume,
@@ -208,7 +208,7 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         return false;
       }
 
-      await api.post('/training/api/plan/save/', state.generatedPlan);
+      await api.post('/api/plan/save/', state.generatedPlan);
       
       setState(prev => ({ ...prev, loading: false, error: null }));
       
