@@ -24,7 +24,7 @@ export default function Register() {
 
   // Redirect if already authenticated
   if (authState.authenticated) {
-    return <Redirect href="/" />;
+    return <Redirect href="/auth/login" />;
   }
 
   const validateForm = () => {
@@ -69,7 +69,7 @@ export default function Register() {
 
     const result = await onRegister(email, password, username);
     if (result.success) {
-      router.replace('/');
+      router.replace('/auth/login');
     } else {
       // Handle different types of errors
       if (result.errors) {
