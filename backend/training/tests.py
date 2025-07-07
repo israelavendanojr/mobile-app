@@ -2,9 +2,9 @@ from django.test import TestCase
 from training.models import (
     WorkoutDayTemplate, ExercisePattern, ExerciseMovement,
     Equipment, Muscle, UserPreferences, DayPatternThrough, 
-    WorkoutSplitTemplate, SplitDayThrough
+    WorkoutSplitTemplate, SplitDayThrough, ExerciseType
 )
-from training.utils.plan_generation_utils import generate_day, decide_split
+from training.utils.plan_generation_utils import generate_day, decide_split, decide_sets_and_reps
 from django.contrib.auth import get_user_model
 
 class ManualDBTestCase(TestCase):
@@ -145,3 +145,41 @@ class ManualDBTestCase(TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result.name, "2-Day Full Body")
         self.assertEqual(result.days_per_week, 2)
+
+
+class DecideSetsAndRepsTestCase(TestCase):
+    def setUp(self):
+        self.compound = ExerciseMovement(name="Squat", type=ExerciseType.COMPOUND)
+        self.isolation = ExerciseMovement(name="Bicep Curl", type=ExerciseType.ISOLATION)
+
+    def test_low_volume_compound(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.compound, "low")
+            self.assertEqual(sets, 2)
+            self.assertIn((start, end), [(4,6), (6,8)])
+
+    def test_low_volume_isolation(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.isolation, "low")
+            self.assertIn((sets, start, end), [(2, 6, 8), (1, 8, 10)])
+
+    def test_moderate_volume_compound(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.compound, "moderate")
+            self.assertEqual(sets, 3)
+            self.assertIn((start, end), [(6, 10), (8, 12)])
+
+    def test_moderate_volume_isolation(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.isolation, "moderate")
+            self.assertIn((sets, start, end), [(2, 8, 10), (3, 8, 12)])
+
+    def test_high_volume_compound(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.compound, "high")
+            self.assertIn((sets, start, end), [(4, 8, 12), (3, 10, 15)])
+
+    def test_high_volume_isolation(self):
+        for _ in range(10):
+            sets, start, end = decide_sets_and_reps(self.isolation, "high")
+            self.assertIn((sets, start, end), [(3, 8, 12), (3, 10, 15)])

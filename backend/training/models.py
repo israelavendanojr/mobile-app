@@ -31,7 +31,7 @@ class ExerciseMovement(models.Model):
     pattern = models.ForeignKey(ExercisePattern, on_delete=models.CASCADE, related_name="movements")
     name = models.CharField(max_length=100) # e.g., "Pull-up"
     equipment = models.ManyToManyField(Equipment)
-    type = models.CharField(max_length=100, choices=ExerciseType.choices)
+    type = models.CharField(max_length=100, choices=ExerciseType.choices, default=ExerciseType.COMPOUND)
     
     def __str__(self):
         return self.name
