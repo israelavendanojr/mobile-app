@@ -63,7 +63,7 @@ export default function Profile() {
 
             if (result.success) {
               Alert.alert('Account Deleted', 'Your account has been deleted successfully');
-              router.replace('/login');
+              router.replace('/auth/login');
             } else {
               Alert.alert('Error', result.error || 'Failed to delete account');
             }
@@ -75,7 +75,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await onLogout();
-    router.replace('/login');
+    router.replace('/auth/login');
   };
 
   if (!authState.user) {

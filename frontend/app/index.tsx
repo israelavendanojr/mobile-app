@@ -9,7 +9,7 @@ export default function Index() {
 
   const handleLogout = async () => {
     await onLogout();
-    router.replace('/login');
+    router.replace('/auth/login');
   };
 
   return (

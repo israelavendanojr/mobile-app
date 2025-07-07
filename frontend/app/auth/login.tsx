@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { router } from 'expo-router';
 import { Redirect } from 'expo-router';
 
@@ -133,7 +133,7 @@ export default function Login() {
                 <Button title="Sign In" onPress={handleLogin} />
                 <Button 
                   title="Don't have an account? Register" 
-                  onPress={() => router.push('/register')}
+                  onPress={() => router.push('/auth/register')}
                   color="#6B7280"
                 />
               </>
