@@ -73,5 +73,24 @@ def decide_split(preferences):
     return WorkoutSplitTemplate.objects.filter(days_per_week=preferences.days_per_week).first()
 
 def generate_plan(preferences):
-    # Placeholder for now – you’ll likely iterate workout_day_template over split
-    pass
+    workout_split = decide_split(preferences)
+    if not workout_split:
+        return []
+
+    plan = {
+        "name": workout_split.name,
+        "days_per_week": workout_split.days_per_week,
+        "days": []
+    }
+
+    ordered_days = workout_split.workouts.order_by("splitdaythrough__day_index")
+    for day_template in ordered_days:
+        day_plan = generate_day(preferences, day_template)
+        plan["days"].append({
+            "day_name": day_template.name,
+            "exercises": day_plan
+        })
+
+    return plan
+
+    

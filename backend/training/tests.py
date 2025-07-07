@@ -4,7 +4,7 @@ from training.models import (
     Equipment, Muscle, UserPreferences, DayPatternThrough, 
     WorkoutSplitTemplate, SplitDayThrough, ExerciseType
 )
-from training.utils.plan_generation_utils import generate_day, decide_split, decide_sets_and_reps
+from training.utils.plan_generation_utils import generate_day, decide_split, decide_sets_and_reps, generate_plan
 from django.contrib.auth import get_user_model
 
 class ManualDBTestCase(TestCase):
@@ -183,3 +183,63 @@ class DecideSetsAndRepsTestCase(TestCase):
         for _ in range(10):
             sets, start, end = decide_sets_and_reps(self.isolation, "high")
             self.assertIn((sets, start, end), [(3, 8, 12), (3, 10, 15)])
+
+class GeneratePlanTestCase(TestCase):
+    def setUp(self):
+        # Basic setup
+        self.user = get_user_model().objects.create_user(username='tester', password='testpass')
+        self.barbell = Equipment.objects.create(name="Barbell")
+        self.chest = Muscle.objects.create(name="Chest")
+        self.push_pattern = ExercisePattern.objects.create(name="Horizontal Push")
+        self.push_pattern.target_muscles.add(self.chest)
+
+        # Exercise with type
+        self.push_exercise = ExerciseMovement.objects.create(
+            name="Barbell Bench Press", pattern=self.push_pattern, type=ExerciseType.COMPOUND
+        )
+        self.push_exercise.equipment.add(self.barbell)
+
+        # Preferences
+        self.prefs = UserPreferences.objects.create(
+            user=self.user,
+            days_per_week=1,
+            training_age=1,
+            volume="moderate",
+            bodyweight_exercises="weighted"
+        )
+        self.prefs.equipment.set([self.barbell])
+
+        # Day template
+        self.day_template = WorkoutDayTemplate.objects.create(name="Push")
+        DayPatternThrough.objects.create(
+            day_template=self.day_template,
+            pattern=self.push_pattern,
+            pattern_index=0
+        )
+
+        # Split
+        self.split = WorkoutSplitTemplate.objects.create(name="1-Day Push", days_per_week=1)
+        SplitDayThrough.objects.create(split=self.split, day_template=self.day_template, day_index=0)
+
+    def test_generate_plan_with_valid_split(self):
+        plan = generate_plan(self.prefs)
+
+        self.assertEqual(plan["name"], "1-Day Push")
+        self.assertEqual(plan["days_per_week"], 1)
+        self.assertEqual(len(plan["days"]), 1)
+
+        day = plan["days"][0]
+        self.assertEqual(day["day_name"], "Push")
+        self.assertEqual(len(day["exercises"]), 1)
+        self.assertEqual(day["exercises"][0]["exercise_name"], "Barbell Bench Press")
+        self.assertIn("sets", day["exercises"][0])
+        self.assertIn("start_reps", day["exercises"][0])
+        self.assertIn("end_reps", day["exercises"][0])
+
+    def test_generate_plan_with_no_split_match(self):
+        # Modify prefs to not match any split
+        self.prefs.days_per_week = 3
+        self.prefs.save()
+
+        plan = generate_plan(self.prefs)
+        self.assertEqual(plan, [])  # Should return an empty list
