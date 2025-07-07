@@ -27,7 +27,6 @@ class ExerciseMovement(models.Model):
     pattern = models.ForeignKey(ExercisePattern, on_delete=models.CASCADE, related_name="movements")
     name = models.CharField(max_length=100) # e.g., "Pull-up"
     equipment = models.ManyToManyField(Equipment)
-    tags = models.JSONField(default=list)
     
     def __str__(self):
         return self.name
@@ -74,11 +73,11 @@ class UserPreferences(models.Model):
     volume = models.CharField(max_length=50, choices=[
         ("low", "Low"), ("moderate", "Moderate"), ("high", "High")
     ])
-    priority_muscles = models.JSONField(default=list, blank=True, null=True)
+    priority_muscles = models.ManyToManyField(Muscle)
     bodyweight_exercises = models.CharField(max_length=50, choices=[
         ("bodyweight", "Bodyweight"), ("weighted", "Weighted"), ("absent", "Absent")
     ])
-    equipment = models.JSONField(default=list)
+    equipment = models.ManyToManyField(Equipment)
     
     def __str__(self):
         return f"{self.user.username}'s Preferences"

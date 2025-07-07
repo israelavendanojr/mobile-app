@@ -1,9 +1,12 @@
+
+from training.models import ExerciseMovement, Equipment
+
 def attach_exercise(preferences, pattern, used_exercises=set()):
-    available_equipment = preferences.equipment
+    available_equipment = preferences.equipment.values_list('name', flat=True)
 
     # Filter exercises by pattern, equipment, and exclude already used exercises
     candidates = ExerciseMovement.objects.filter(pattern=pattern)
-    candidates = candidates.filter(equipment__overlap=available_equipment)
+    candidates = candidates.filter(equipment__name__in=available_equipment).distinct()
     candidates = candidates.exclude(id__in=[ex.id for ex in used_exercises])
 
     if not candidates.exists():
@@ -14,11 +17,9 @@ def attach_exercise(preferences, pattern, used_exercises=set()):
     return chosen
      
 def generate_day(preferences, workout_day_template):
-    patterns = workout_day_template.patterns
+    patterns = workout_day_template.patterns.all()
     used_exercises = set()
     day_plan = []
-
-    # if user wants minimal plan, cut patterns here
 
     for pattern in patterns:
         exercise = attach_exercise(preferences, pattern, used_exercises)
@@ -37,8 +38,9 @@ def generate_day(preferences, workout_day_template):
                 "exercise_name": "No Suitable Exercises",
                 "skip": True,
             })
-    
+
     return day_plan
+
     
 def decide_split(preferences):
     pass
