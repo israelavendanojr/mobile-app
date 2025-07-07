@@ -21,13 +21,27 @@ class ExerciseMovement(models.Model):
 class WorkoutDayTemplate(models.Model):
     name = models.CharField(max_length=100) # e.g., "Pull"
     patterns = models.ManyToManyField(ExercisePattern)
-    days_per_week = models.IntegerField()
     
     def __str__(self):
         return self.name
 
-User = get_user_model()
+class WorkoutSplit(models.Model):
+    name = models.CharField(max_length=100) # e.g., "Push Pull Legs"
+    workouts = models.ManyToManyField(WorkoutDayTemplate, through='WorkoutSplitDay')
+    days_per_week = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)])
+    
+    def __str__(self):
+        return self.name
 
+# Through model to preserve order of workouts in split
+class WorkoutSplitDay(models.Model):
+    split = models.ForeignKey(WorkoutSplit, on_delete=models.CASCADE)
+    day_template = models.ForeignKey(WorkoutDayTemplate, on_delete=models.CASCADE)
+    day_index = models.IntegerField() 
+
+
+User = get_user_model()
+# Stored preferences for workout generation
 class UserPreferences(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     days_per_week = models.IntegerField(default=2, validators=[MinValueValidator(1), MaxValueValidator(7)])
@@ -41,7 +55,6 @@ class UserPreferences(models.Model):
     ])
     equipment = models.JSONField(default=list)
     
-
     def __str__(self):
         return f"{self.user.username}'s Preferences"
 
