@@ -26,4 +26,5 @@ def get_preferences(request):
         serializer = UserPreferencesSerializer(prefs)
         return Response(serializer.data)
     except UserPreferences.DoesNotExist:
-        return Response({}, status=204)
+        return Response({"message": "No preferences set yet."}, status=204)
+
