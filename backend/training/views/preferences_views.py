@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from training.models.preference_model import UserPreferences
-from training.serializers.preferences import UserPreferencesSerializer
+from training.serializers.preferences_serializers import UserPreferencesSerializer
 
 @api_view(["POST", "PUT"])
 @permission_classes([IsAuthenticated])

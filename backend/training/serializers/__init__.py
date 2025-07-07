@@ -1,3 +1,3 @@
-from .preferences import *
-from .preview import *
-from .user_plan import *
+from .preview_serializers import PlanPreviewSerializer, PlanRequestSerializer
+from .preferences_serializers import UserPreferencesSerializer
+from .user_plan_serializers import WorkoutPlanSerializer

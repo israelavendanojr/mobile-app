@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from training.models.generation_models import Muscle, Equipment
-from training.models.plan_generation_models import ExerciseMovement
 
 User = get_user_model()
 class UserPreferences(models.Model):

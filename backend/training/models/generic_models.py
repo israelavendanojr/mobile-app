@@ -1,3 +1,5 @@
+from django.db import models
+
 # Generic models
 class Muscle(models.Model):
     name = models.CharField(max_length=100, unique=True)
