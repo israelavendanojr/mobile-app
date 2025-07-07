@@ -1,3 +1,4 @@
+from .generic_serializers import MuscleSerializer, EquipmentSerializer
 from .preview_serializers import PlanPreviewSerializer, PlanRequestSerializer
 from .preferences_serializers import UserPreferencesSerializer
 from .user_plan_serializers import WorkoutPlanSerializer

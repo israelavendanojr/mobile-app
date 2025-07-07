@@ -1,12 +1,14 @@
-// app/_layout.tsx
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
 import '@/global.css';
+import { OnboardingProvider } from '../context/OnboardingContext';
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack />
+      <OnboardingProvider>
+        <Stack />
+      </OnboardingProvider>
     </AuthProvider>
   );
 }
