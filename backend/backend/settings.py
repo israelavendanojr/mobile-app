@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',  # For logout functionality
     'corsheaders',
     'accounts',
+    'training',
 ]
 
 MIDDLEWARE = [
