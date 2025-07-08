@@ -1,33 +1,56 @@
 import random
 from training.models import ExerciseMovement, WorkoutSplitTemplate, ExerciseType, WorkoutPlan, WorkoutDay, PlannedExercise
 
+import random
+from training.models import ExerciseMovement, Equipment
+
 def attach_exercise(preferences, pattern, used_exercises=None):
     if used_exercises is None:
         used_exercises = set()
 
-    # Handle both QuerySet and list cases
-    equipment = preferences["equipment"]
-    if hasattr(equipment, 'values_list'):
-        # It's a QuerySet
-        available_equipment = equipment.values_list('name', flat=True)
-    else:
-        # It's already a list of equipment names or objects
-        if equipment and hasattr(equipment[0], 'name'):
-            # List of equipment objects
-            available_equipment = [eq.name for eq in equipment]
-        else:
-            # List of equipment names
-            available_equipment = equipment
+    print(f"\n=== DEBUG attach_exercise for pattern: {pattern} ===")
+    print(f"Pattern ID: {pattern.id}")
+    print(f"Pattern name: {pattern.name}")
 
-    # Filter exercises by pattern, equipment, and exclude already used exercises
+    # Retrieve equipment IDs from preferences
+    equipment_ids = preferences.get("equipment", [])
+    print(f"Equipment IDs: {equipment_ids}")
+
+    # Get equipment names from IDs
+    available_equipment = list(
+        Equipment.objects.filter(id__in=equipment_ids).values_list("name", flat=True)
+    )
+    print(f"Available equipment names from IDs: {available_equipment}")
+
+    # Debug: Check all exercises for this pattern
+    all_pattern_exercises = ExerciseMovement.objects.filter(pattern=pattern)
+    print(f"All exercises for pattern {pattern.name}: {all_pattern_exercises.count()}")
+    for ex in all_pattern_exercises:
+        ex_equipment = [eq.name for eq in ex.equipment.all()]
+        print(f"  - {ex.name}: equipment={ex_equipment}")
+
+    # Filter exercises by pattern and equipment
     candidates = ExerciseMovement.objects.filter(pattern=pattern)
-    candidates = candidates.filter(equipment__name__in=available_equipment).distinct()
-    candidates = candidates.exclude(id__in=[ex.id for ex in used_exercises])
+    print(f"Candidates after pattern filter: {candidates.count()}")
 
-    if not candidates.exists():
-        return None 
+    equipment_filtered = candidates.filter(equipment__name__in=available_equipment).distinct()
+    print(f"Candidates after equipment filter: {equipment_filtered.count()}")
 
-    return candidates.order_by('?').first()
+    used_exercise_ids = [ex.id for ex in used_exercises]
+    print(f"Used exercise IDs: {used_exercise_ids}")
+
+    final_candidates = equipment_filtered.exclude(id__in=used_exercise_ids)
+    print(f"Final candidates: {final_candidates.count()}")
+
+    if not final_candidates.exists():
+        print("No suitable exercises found!")
+        return None
+
+    selected = final_candidates.order_by('?').first()
+    print(f"Selected exercise: {selected}")
+    print("=== END DEBUG ===\n")
+
+    return selected
 
 def decide_sets_and_reps(exercise, volume):
     if not exercise or not hasattr(exercise, "type"):
@@ -60,8 +83,13 @@ def generate_day(preferences, workout_day_template):
     used_exercises = set()
     day_plan = []
 
+    print(f"\n=== Generating day: {workout_day_template.name} ===")
+    print(f"Patterns for this day: {[p.name for p in patterns]}")
+
     for pattern in patterns:
         exercise = attach_exercise(preferences, pattern, used_exercises)
+        print(f"Exercise for pattern {pattern}: {exercise}")
+        
         if exercise:
             used_exercises.add(exercise)
             sets, start_reps, end_reps = decide_sets_and_reps(exercise, preferences.get("volume", "moderate"))
@@ -83,16 +111,23 @@ def generate_day(preferences, workout_day_template):
                 "skip": True,
             })
 
+    print(f"Day plan generated: {len(day_plan)} exercises")
     return day_plan
 
 def decide_split(days_per_week):
     return WorkoutSplitTemplate.objects.filter(days_per_week=days_per_week).first()
 
 def generate_plan(preferences):
+    print(f"\n=== Generating plan ===")
+    print(f"Preferences: {preferences}")
+    
     days_per_week = preferences["days_per_week"]
     workout_split = decide_split(days_per_week)
     if not workout_split:
+        print(f"No workout split found for {days_per_week} days per week")
         return None
+
+    print(f"Using workout split: {workout_split.name}")
 
     plan = {
         "name": workout_split.name,
@@ -101,6 +136,8 @@ def generate_plan(preferences):
     }
 
     ordered_days = workout_split.workouts.order_by("splitdaythrough__day_index")
+    print(f"Ordered days: {[d.name for d in ordered_days]}")
+    
     for day_template in ordered_days:
         day_plan = generate_day(preferences, day_template)
         plan["days"].append({
