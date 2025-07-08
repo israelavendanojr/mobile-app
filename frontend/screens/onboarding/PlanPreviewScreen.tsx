@@ -161,6 +161,17 @@ export default function PlanPreviewScreen() {
     );
   }
 
+  // Debug logging
+  console.log('=== DEBUG INFO ===');
+  console.log('state.generatedPlan:', state.generatedPlan);
+  console.log('Type of generatedPlan:', typeof state.generatedPlan);
+  console.log('Is array?', Array.isArray(state.generatedPlan));
+  console.log('Is truthy?', !!state.generatedPlan);
+  if (state.generatedPlan && typeof state.generatedPlan === 'object') {
+    console.log('Keys:', Object.keys(state.generatedPlan));
+  }
+  console.log('==================');
+
   return (
     <ScrollView className="flex-1 bg-gray-50">
       <View className="p-6">
@@ -170,9 +181,24 @@ export default function PlanPreviewScreen() {
         <Text className="text-center text-gray-600 mb-6">
           Preview your personalized workout plan
         </Text>
+        
+        {/* Debug display */}
+        <Text className="text-sm text-gray-500 mb-4">
+          Debug: Plan exists: {state.generatedPlan ? 'Yes' : 'No'}, 
+          Type: {typeof state.generatedPlan}, 
+          Is Array: {Array.isArray(state.generatedPlan) ? 'Yes' : 'No'}
+        </Text>
+        
         {/* Added safety checks for array and map */}
         {state.generatedPlan && Array.isArray(state.generatedPlan) && 
           state.generatedPlan.map((day: any, index: number) => 
+            renderDay(day, index)
+          )
+        }
+        
+        {/* Alternative rendering if it's an object with a 'days' property */}
+        {state.generatedPlan && !Array.isArray(state.generatedPlan) && state.generatedPlan.days &&
+          state.generatedPlan.days.map((day: any, index: number) => 
             renderDay(day, index)
           )
         }
