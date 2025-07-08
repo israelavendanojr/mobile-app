@@ -71,6 +71,9 @@ export default function PlanPreviewScreen() {
   };
 
   const renderExercise = (exercise: any, index: number) => {
+    // Add more detailed logging for exercise structure
+    console.log('Exercise data:', exercise);
+    
     if (exercise.skip) {
       return (
         <View key={index} className="bg-gray-100 p-3 rounded-lg mb-2">
@@ -82,28 +85,36 @@ export default function PlanPreviewScreen() {
     return (
       <View key={index} className="bg-white border border-gray-200 p-4 rounded-lg mb-2">
         <Text className="font-semibold text-gray-800 text-lg">
-          {exercise.exercise_name}
+          {exercise.exercise_name || exercise.name || 'Unknown Exercise'}
         </Text>
         <Text className="text-gray-600 mt-1">
-          {exercise.sets} sets × {exercise.start_reps}
-          {exercise.end_reps !== exercise.start_reps && `-${exercise.end_reps}`} reps
+          {exercise.sets || 'N/A'} sets × {exercise.start_reps || exercise.reps || 'N/A'}
+          {exercise.end_reps && exercise.end_reps !== exercise.start_reps && `-${exercise.end_reps}`} reps
         </Text>
       </View>
     );
   };
 
-  const renderDay = (day: any, index: number) => (
-    <View key={index} className="mb-6">
-      <Text className="text-xl font-bold text-gray-800 mb-3">
-        {day.day_name}
-      </Text>
-      <View className="ml-2">
-        {day.exercises?.map((exercise: any, exIndex: number) => 
-          renderExercise(exercise, exIndex)
-        )}
+  const renderDay = (day: any, index: number) => {
+    console.log('Day data:', day);
+    
+    return (
+      <View key={index} className="mb-6">
+        <Text className="text-xl font-bold text-gray-800 mb-3">
+          {day.day_name || day.name || `Day ${index + 1}`}
+        </Text>
+        <View className="ml-2">
+          {day.exercises && day.exercises.length > 0 ? (
+            day.exercises.map((exercise: any, exIndex: number) => 
+              renderExercise(exercise, exIndex)
+            )
+          ) : (
+            <Text className="text-gray-500 italic">No Suitable Exercises</Text>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (isGenerating || (state.loading && !state.generatedPlan)) {
     return (
@@ -169,8 +180,17 @@ export default function PlanPreviewScreen() {
   console.log('Is truthy?', !!state.generatedPlan);
   if (state.generatedPlan && typeof state.generatedPlan === 'object') {
     console.log('Keys:', Object.keys(state.generatedPlan));
+    if (state.generatedPlan.days) {
+      console.log('Days array length:', state.generatedPlan.days.length);
+      console.log('First day:', state.generatedPlan.days[0]);
+    }
   }
   console.log('==================');
+
+  // Get the days array from the plan
+  const daysArray = Array.isArray(state.generatedPlan) 
+    ? state.generatedPlan 
+    : state.generatedPlan.days || [];
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
@@ -182,6 +202,13 @@ export default function PlanPreviewScreen() {
           Preview your personalized workout plan
         </Text>
         
+        {/* Show plan name if available */}
+        {state.generatedPlan?.name && (
+          <Text className="text-center text-lg font-semibold text-blue-600 mb-4">
+            {state.generatedPlan.name}
+          </Text>
+        )}
+        
         {/* Debug display */}
         <Text className="text-sm text-gray-500 mb-4">
           Debug: Plan exists: {state.generatedPlan ? 'Yes' : 'No'}, 
@@ -189,19 +216,33 @@ export default function PlanPreviewScreen() {
           Is Array: {Array.isArray(state.generatedPlan) ? 'Yes' : 'No'}
         </Text>
         
-        {/* Added safety checks for array and map */}
-        {state.generatedPlan && Array.isArray(state.generatedPlan) && 
-          state.generatedPlan.map((day: any, index: number) => 
+        {/* Render days */}
+        {daysArray.length > 0 ? (
+          daysArray.map((day: any, index: number) => 
             renderDay(day, index)
           )
-        }
+        ) : (
+          <View className="items-center justify-center p-8">
+            <Text className="text-gray-500 text-lg">
+              No workout days found in your plan
+            </Text>
+          </View>
+        )}
         
-        {/* Alternative rendering if it's an object with a 'days' property */}
-        {state.generatedPlan && !Array.isArray(state.generatedPlan) && state.generatedPlan.days &&
-          state.generatedPlan.days.map((day: any, index: number) => 
-            renderDay(day, index)
-          )
-        }
+        {/* Action buttons */}
+        <View className="mt-6 space-y-3">
+          <Button
+            title="Regenerate Plan"
+            onPress={handleRegenerate}
+            disabled={isGenerating}
+          />
+          <Button
+            title="Save Plan"
+            onPress={handleSavePlan}
+            disabled={isSaving}
+            color="#22c55e"
+          />
+        </View>
       </View>
     </ScrollView>
   );

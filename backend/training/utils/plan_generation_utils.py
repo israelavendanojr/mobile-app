@@ -1,5 +1,5 @@
 import random
-from training.models import ExerciseMovement, WorkoutSplitTemplate, ExerciseType
+from training.models import ExerciseMovement, WorkoutSplitTemplate, ExerciseType, WorkoutPlan, WorkoutDay, PlannedExercise
 
 def attach_exercise(preferences, pattern, used_exercises=None):
     if used_exercises is None:
@@ -64,13 +64,14 @@ def generate_day(preferences, workout_day_template):
         exercise = attach_exercise(preferences, pattern, used_exercises)
         if exercise:
             used_exercises.add(exercise)
-            sets, start_reps, end_reps = decide_sets_and_reps(exercise, preferences.volume)
+            sets, start_reps, end_reps = decide_sets_and_reps(exercise, preferences.get("volume", "moderate"))
             day_plan.append({
                 "exercise": exercise,
                 "exercise_name": exercise.name,
                 "sets": sets,
                 "start_reps": start_reps,
                 "end_reps": end_reps,
+                "skip": False,
             })
         else:
             day_plan.append({
@@ -91,7 +92,7 @@ def generate_plan(preferences):
     days_per_week = preferences["days_per_week"]
     workout_split = decide_split(days_per_week)
     if not workout_split:
-        return []
+        return None
 
     plan = {
         "name": workout_split.name,
@@ -109,8 +110,8 @@ def generate_plan(preferences):
 
     return plan
 
-    
 def save_generated_plan(user, plan_dict):
+    """Save a generated plan to the database"""
     plan = WorkoutPlan.objects.create(
         user=user,
         name=plan_dict["name"],
@@ -125,7 +126,7 @@ def save_generated_plan(user, plan_dict):
         )
 
         for ex in day["exercises"]:
-            LoggedExercise.objects.create(
+            PlannedExercise.objects.create(
                 day=workout_day,
                 name=ex["exercise_name"],
                 sets=ex.get("sets", 0),
