@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { router } from "expo-router";
 import api from "../api/api";
 import { useAuth } from "./AuthContext";
+import * as SecureStore from 'expo-secure-store';
 
 interface OnboardingPreferences {
   days_per_week: number;
@@ -64,10 +65,14 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   // Fetch muscles from API
   const fetchMuscles = useCallback(async () => {
     try {
+      // Debug: Check token before making request
+      const token = await SecureStore.getItemAsync('access');
+      console.log('Token exists:', !!token);
+      
       const response = await api.get('/api/muscles/');
       setState(prev => ({ ...prev, muscles: response.data }));
-    } catch (error) {
-      console.error('Error fetching muscles:', error);
+    } catch (error: any) {
+      console.error('Error fetching muscles:', error.response?.data || error.message);
       setState(prev => ({ ...prev, error: 'Failed to fetch muscles' }));
     }
   }, []);
@@ -84,13 +89,20 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   }, []);
 
   // Initialize by fetching reference data only when user is authenticated
-  useEffect(() => {
-    if (authState.authenticated && authState.user) {
-      fetchMuscles();
-      fetchEquipment();
-    }
-  }, [authState.authenticated, authState.user, fetchMuscles, fetchEquipment]);
-
+  // useEffect(() => {
+  //   const load = async () => {
+  //     const token = await SecureStore.getItemAsync('access');
+  //     if (authState.authenticated === true && authState.user && token) {
+  //       fetchMuscles();
+  //       fetchEquipment();
+  //     } else {
+  //       console.log("⛔️ Skipping onboarding fetch: Auth or token not ready");
+  //     }
+  //   };
+  
+  //   load();
+  // }, [authState.authenticated, authState.user, fetchMuscles, fetchEquipment]);
+  
   const updatePreferences = useCallback((preferences: Partial<OnboardingPreferences>) => {
     setState(prev => ({
       ...prev,

@@ -10,10 +10,27 @@ import {
   Alert
 } from 'react-native';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useAuth } from '../../context/AuthContext';
+
 
 export default function PreferencesScreen() {
-  const { state, updatePreferences, nextStep, prevStep, setError } = useOnboarding();
+  const { 
+    state, 
+    updatePreferences, 
+    nextStep, 
+    prevStep, 
+    setError, 
+    fetchMuscles, 
+    fetchEquipment 
+  } = useOnboarding();
   
+  const { authState } = useAuth();
+
+  useEffect(() => {
+    if (state.muscles.length === 0) fetchMuscles();
+    if (state.equipmentOptions.length === 0) fetchEquipment();
+  }, []);
+
   const [formData, setFormData] = useState({
     days_per_week: state.preferences.days_per_week || 3,
     training_age: state.preferences.training_age || 0,
