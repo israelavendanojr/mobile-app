@@ -10,7 +10,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await SecureStore.getItemAsync('access');
+      const token = await SecureStore.getItemAsync('access_token');
       console.log('🔑 Token found:', token ? 'Yes' : 'No');
       console.log('🔑 Token preview:', token ? token.substring(0, 20) + '...' : 'None');
       
@@ -48,7 +48,7 @@ api.interceptors.response.use(
       original._retry = true;
       
       try {
-        const refreshToken = await SecureStore.getItemAsync('refresh');
+        const refreshToken = await SecureStore.getItemAsync('refresh_token');
         console.log('🔑 Refresh token found:', refreshToken ? 'Yes' : 'No');
         
         if (refreshToken) {
@@ -57,7 +57,7 @@ api.interceptors.response.use(
           });
           
           const { access } = response.data;
-          await SecureStore.setItemAsync('access', access);
+          await SecureStore.setItemAsync('access_token', access);
           console.log('✅ Token refreshed successfully');
           
           // Retry the original request with new token
@@ -67,8 +67,8 @@ api.interceptors.response.use(
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', refreshError);
         // Clear stored tokens and redirect to login
-        await SecureStore.deleteItemAsync('access');
-        await SecureStore.deleteItemAsync('refresh');
+        await SecureStore.deleteItemAsync('access_token');
+        await SecureStore.deleteItemAsync('refresh_token');
         // You might want to navigate to login screen here
       }
     }
