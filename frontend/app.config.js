@@ -45,6 +45,7 @@ export default {
         },
       ],
       "expo-secure-store",
+      "expo-font"
     ],
     extra: {
       API_URL: process.env.API_URL,

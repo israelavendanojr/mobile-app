@@ -11,16 +11,7 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_muscles(request):
-    # Debug logging
-    logger.info(f"🔍 Request user: {request.user}")
-    logger.info(f"🔍 Is authenticated: {request.user.is_authenticated}")
-    logger.info(f"🔍 Auth header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
-    
-    print(f"🔍 Request user: {request.user}")
-    print(f"🔍 Is authenticated: {request.user.is_authenticated}")
-    print(f"🔍 Auth header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
-    
+def get_muscles(request):    
     if not request.user.is_authenticated:
         return Response({'error': 'Not authenticated'}, status=401)
     
@@ -31,15 +22,6 @@ def get_muscles(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_equipment(request):
-    # Debug logging
-    logger.info(f"🔍 Request user: {request.user}")
-    logger.info(f"🔍 Is authenticated: {request.user.is_authenticated}")
-    logger.info(f"🔍 Auth header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
-    
-    print(f"🔍 Request user: {request.user}")
-    print(f"🔍 Is authenticated: {request.user.is_authenticated}")
-    print(f"🔍 Auth header: {request.META.get('HTTP_AUTHORIZATION', 'No auth header')}")
-    
     if not request.user.is_authenticated:
         return Response({'error': 'Not authenticated'}, status=401)
     

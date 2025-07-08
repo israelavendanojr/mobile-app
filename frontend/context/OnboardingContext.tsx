@@ -65,43 +65,68 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   // Fetch muscles from API
   const fetchMuscles = useCallback(async () => {
     try {
+      setState(prev => ({ ...prev, loading: true }));
+      
       // Debug: Check token before making request
-      const token = await SecureStore.getItemAsync('access');
+      const token = await SecureStore.getItemAsync('access_token');
       console.log('Token exists:', !!token);
       
       const response = await api.get('/api/muscles/');
-      setState(prev => ({ ...prev, muscles: response.data }));
+      setState(prev => ({ ...prev, muscles: response.data, loading: false }));
     } catch (error: any) {
       console.error('Error fetching muscles:', error.response?.data || error.message);
-      setState(prev => ({ ...prev, error: 'Failed to fetch muscles' }));
+      setState(prev => ({ ...prev, error: 'Failed to fetch muscles', loading: false }));
     }
   }, []);
 
   // Fetch equipment from API
   const fetchEquipment = useCallback(async () => {
     try {
+      setState(prev => ({ ...prev, loading: true }));
+      
       const response = await api.get('/api/equipment/');
-      setState(prev => ({ ...prev, equipmentOptions: response.data }));
+      setState(prev => ({ ...prev, equipmentOptions: response.data, loading: false }));
     } catch (error) {
       console.error('Error fetching equipment:', error);
-      setState(prev => ({ ...prev, error: 'Failed to fetch equipment' }));
+      setState(prev => ({ ...prev, error: 'Failed to fetch equipment', loading: false }));
     }
   }, []);
 
   // Initialize by fetching reference data only when user is authenticated
-  // useEffect(() => {
-  //   const load = async () => {
-  //     const token = await SecureStore.getItemAsync('access');
-  //     if (authState.authenticated === true && authState.user && token) {
-  //       fetchMuscles();
-  //       fetchEquipment();
-  //     } else {
-  //       console.log("⛔️ Skipping onboarding fetch: Auth or token not ready");
-  //     }
-  //   };
-  
-  //   load();
-  // }, [authState.authenticated, authState.user, fetchMuscles, fetchEquipment]);
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadData = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('access_token');
+        
+        if (authState.authenticated === true && authState.user && token) {
+          
+          // Only update state if component is still mounted
+          if (isMounted) {
+            await Promise.all([
+              fetchMuscles(),
+              fetchEquipment()
+            ]);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading onboarding data:', error);
+        if (isMounted) {
+          setState(prev => ({ ...prev, error: 'Failed to load data', loading: false }));
+        }
+      }
+    };
+
+    // Only load data if we haven't loaded it yet
+    if (authState.authenticated === true && state.muscles.length === 0 && state.equipmentOptions.length === 0) {
+      loadData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authState.authenticated, authState.user, fetchMuscles, fetchEquipment]);
   
   const updatePreferences = useCallback((preferences: Partial<OnboardingPreferences>) => {
     setState(prev => ({
@@ -114,8 +139,12 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
   const nextStep = useCallback(() => {
     setState(prev => {
       const newStep = Math.min(prev.currentStep + 1, prev.totalSteps - 1);
-      
-      // Navigate to appropriate route
+      return { ...prev, currentStep: newStep };
+    });
+    
+    // Navigate after state update, using setTimeout to avoid render-time navigation
+    setTimeout(() => {
+      const newStep = Math.min(state.currentStep + 1, state.totalSteps - 1);
       switch (newStep) {
         case 0:
           router.push('/onboarding/welcome');
@@ -129,16 +158,18 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         default:
           break;
       }
-      
-      return { ...prev, currentStep: newStep };
-    });
-  }, []);
+    }, 0);
+  }, [state.currentStep, state.totalSteps]);
 
   const prevStep = useCallback(() => {
     setState(prev => {
       const newStep = Math.max(prev.currentStep - 1, 0);
-      
-      // Navigate to appropriate route
+      return { ...prev, currentStep: newStep };
+    });
+    
+    // Navigate after state update, using setTimeout to avoid render-time navigation
+    setTimeout(() => {
+      const newStep = Math.max(state.currentStep - 1, 0);
       switch (newStep) {
         case 0:
           router.push('/onboarding/welcome');
@@ -152,28 +183,28 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
         default:
           break;
       }
-      
-      return { ...prev, currentStep: newStep };
-    });
-  }, []);
+    }, 0);
+  }, [state.currentStep]);
 
   const goToStep = useCallback((step: number) => {
     setState(prev => ({ ...prev, currentStep: step }));
     
-    // Navigate to appropriate route
-    switch (step) {
-      case 0:
-        router.push('/onboarding/welcome');
-        break;
-      case 1:
-        router.push('/onboarding/preferences');
-        break;
-      case 2:
-        router.push('/onboarding/preview');
-        break;
-      default:
-        break;
-    }
+    // Navigate after state update, using setTimeout to avoid render-time navigation
+    setTimeout(() => {
+      switch (step) {
+        case 0:
+          router.push('/onboarding/welcome');
+          break;
+        case 1:
+          router.push('/onboarding/preferences');
+          break;
+        case 2:
+          router.push('/onboarding/preview');
+          break;
+        default:
+          break;
+      }
+    }, 0);
   }, []);
 
   const generatePlan = useCallback(async (): Promise<boolean> => {
@@ -228,8 +259,10 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       
       setState(prev => ({ ...prev, loading: false, error: null }));
       
-      // Navigate to main app
-      router.replace('/');
+      // Navigate to main app using setTimeout to avoid render-time navigation
+      setTimeout(() => {
+        router.replace('/');
+      }, 0);
       
       return true;
     } catch (error: any) {

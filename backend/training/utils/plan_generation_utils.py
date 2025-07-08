@@ -5,7 +5,7 @@ def attach_exercise(preferences, pattern, used_exercises=None):
     if used_exercises is None:
         used_exercises = set()
 
-    available_equipment = preferences.equipment.values_list('name', flat=True)
+    available_equipment = preferences["equipment"].values_list('name', flat=True)
 
     # Filter exercises by pattern, equipment, and exclude already used exercises
     candidates = ExerciseMovement.objects.filter(pattern=pattern)
@@ -70,7 +70,7 @@ def generate_day(preferences, workout_day_template):
     return day_plan
 
 def decide_split(preferences):
-    return WorkoutSplitTemplate.objects.filter(days_per_week=preferences.days_per_week).first()
+    return WorkoutSplitTemplate.objects.filter(days_per_week=preferences["days_per_week"]).first()
 
 def generate_plan(preferences):
     workout_split = decide_split(preferences)

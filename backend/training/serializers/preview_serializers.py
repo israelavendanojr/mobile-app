@@ -21,4 +21,4 @@ class PlanRequestSerializer(serializers.Serializer):
     training_age = serializers.IntegerField()
     volume = serializers.ChoiceField(choices=["low", "moderate", "high"])
     bodyweight_exercises = serializers.ChoiceField(choices=["bodyweight", "weighted", "absent"])
-    equipment = serializers.ListField(child=serializers.CharField())
+    equipment = serializers.ListField(child=serializers.IntegerField())
