@@ -5,7 +5,19 @@ def attach_exercise(preferences, pattern, used_exercises=None):
     if used_exercises is None:
         used_exercises = set()
 
-    available_equipment = preferences["equipment"].values_list('name', flat=True)
+    # Handle both QuerySet and list cases
+    equipment = preferences["equipment"]
+    if hasattr(equipment, 'values_list'):
+        # It's a QuerySet
+        available_equipment = equipment.values_list('name', flat=True)
+    else:
+        # It's already a list of equipment names or objects
+        if equipment and hasattr(equipment[0], 'name'):
+            # List of equipment objects
+            available_equipment = [eq.name for eq in equipment]
+        else:
+            # List of equipment names
+            available_equipment = equipment
 
     # Filter exercises by pattern, equipment, and exclude already used exercises
     candidates = ExerciseMovement.objects.filter(pattern=pattern)
@@ -64,16 +76,20 @@ def generate_day(preferences, workout_day_template):
             day_plan.append({
                 "exercise": None,
                 "exercise_name": "No Suitable Exercises",
+                "sets": 0,
+                "start_reps": 0,
+                "end_reps": 0,
                 "skip": True,
             })
 
     return day_plan
 
-def decide_split(preferences):
-    return WorkoutSplitTemplate.objects.filter(days_per_week=preferences["days_per_week"]).first()
+def decide_split(days_per_week):
+    return WorkoutSplitTemplate.objects.filter(days_per_week=days_per_week).first()
 
 def generate_plan(preferences):
-    workout_split = decide_split(preferences)
+    days_per_week = preferences["days_per_week"]
+    workout_split = decide_split(days_per_week)
     if not workout_split:
         return []
 

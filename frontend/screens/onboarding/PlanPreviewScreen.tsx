@@ -15,12 +15,21 @@ export default function PlanPreviewScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Add safety check for state
+  if (!state) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
   useEffect(() => {
     // Auto-generate plan when screen loads if we don't have one
     if (!state.generatedPlan && !state.loading) {
       handleGeneratePlan();
     }
-  }, [state.generatedPlan, state.loading]);
+  }, [state.loading]); // Removed state.generatedPlan from dependencies
 
   const handleGeneratePlan = async () => {
     setIsGenerating(true);
@@ -89,7 +98,7 @@ export default function PlanPreviewScreen() {
         {day.day_name}
       </Text>
       <View className="ml-2">
-        {day.exercises.map((exercise: any, exIndex: number) => 
+        {day.exercises?.map((exercise: any, exIndex: number) => 
           renderExercise(exercise, exIndex)
         )}
       </View>
@@ -161,9 +170,12 @@ export default function PlanPreviewScreen() {
         <Text className="text-center text-gray-600 mb-6">
           Preview your personalized workout plan
         </Text>
-        {state.generatedPlan.map((day: any, index: number) => 
-          renderDay(day, index)
-        )}
+        {/* Added safety checks for array and map */}
+        {state.generatedPlan && Array.isArray(state.generatedPlan) && 
+          state.generatedPlan.map((day: any, index: number) => 
+            renderDay(day, index)
+          )
+        }
       </View>
     </ScrollView>
   );
