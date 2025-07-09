@@ -72,7 +72,7 @@ export default function PlanPreviewScreen() {
 
   const renderExercise = (exercise: any, index: number) => {
     // Add more detailed logging for exercise structure
-    console.log('Exercise data:', exercise);
+    // console.log('Exercise data:', exercise);
     
     if (exercise.skip) {
       return (
@@ -96,7 +96,7 @@ export default function PlanPreviewScreen() {
   };
 
   const renderDay = (day: any, index: number) => {
-    console.log('Day data:', day);
+    // console.log('Day data:', day);
     
     return (
       <View key={index} className="mb-6">
@@ -173,19 +173,19 @@ export default function PlanPreviewScreen() {
   }
 
   // Debug logging
-  console.log('=== DEBUG INFO ===');
-  console.log('state.generatedPlan:', state.generatedPlan);
-  console.log('Type of generatedPlan:', typeof state.generatedPlan);
-  console.log('Is array?', Array.isArray(state.generatedPlan));
-  console.log('Is truthy?', !!state.generatedPlan);
-  if (state.generatedPlan && typeof state.generatedPlan === 'object') {
-    console.log('Keys:', Object.keys(state.generatedPlan));
-    if (state.generatedPlan.days) {
-      console.log('Days array length:', state.generatedPlan.days.length);
-      console.log('First day:', state.generatedPlan.days[0]);
-    }
-  }
-  console.log('==================');
+  // console.log('=== DEBUG INFO ===');
+  // console.log('state.generatedPlan:', state.generatedPlan);
+  // console.log('Type of generatedPlan:', typeof state.generatedPlan);
+  // console.log('Is array?', Array.isArray(state.generatedPlan));
+  // console.log('Is truthy?', !!state.generatedPlan);
+  // if (state.generatedPlan && typeof state.generatedPlan === 'object') {
+  //   console.log('Keys:', Object.keys(state.generatedPlan));
+  //   if (state.generatedPlan.days) {
+  //     console.log('Days array length:', state.generatedPlan.days.length);
+  //     console.log('First day:', state.generatedPlan.days[0]);
+  //   }
+  // }
+  // console.log('==================');
 
   // Get the days array from the plan
   const daysArray = Array.isArray(state.generatedPlan) 

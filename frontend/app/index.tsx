@@ -26,7 +26,7 @@ export default function Index() {
     <ProtectedRoute>
       <View className="flex-1 items-center justify-center bg-white">
         <Text className="text-2xl font-bold mb-4">Welcome to the App!</Text>
-        <Button title="Go to Onboarding" onPress={() => router.push('/onboarding/welcome')} />
+        <Button title="Go to Plan Generator" onPress={() => router.push('/generator/welcome')} />
         <Button title="Go to Profile" onPress={() => router.push('/auth/profile')} />
         <Button title="Logout" onPress={handleLogout} />
       </View>

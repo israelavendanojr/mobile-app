@@ -147,13 +147,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       const newStep = Math.min(state.currentStep + 1, state.totalSteps - 1);
       switch (newStep) {
         case 0:
-          router.push('/onboarding/welcome');
+          router.push('/generator/welcome');
           break;
         case 1:
-          router.push('/onboarding/preferences');
+          router.push('/generator/preferences');
           break;
         case 2:
-          router.push('/onboarding/preview');
+          router.push('/generator/preview');
           break;
         default:
           break;
@@ -172,13 +172,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
       const newStep = Math.max(state.currentStep - 1, 0);
       switch (newStep) {
         case 0:
-          router.push('/onboarding/welcome');
+          router.push('/generator/welcome');
           break;
         case 1:
-          router.push('/onboarding/preferences');
+          router.push('/generator/preferences');
           break;
         case 2:
-          router.push('/onboarding/preview');
+          router.push('/generator/preview');
           break;
         default:
           break;
@@ -193,13 +193,13 @@ export const OnboardingProvider = ({ children }: { children: React.ReactNode }) 
     setTimeout(() => {
       switch (step) {
         case 0:
-          router.push('/onboarding/welcome');
+          router.push('/generator/welcome');
           break;
         case 1:
-          router.push('/onboarding/preferences');
+          router.push('/generator/preferences');
           break;
         case 2:
-          router.push('/onboarding/preview');
+          router.push('/generator/preview');
           break;
         default:
           break;
