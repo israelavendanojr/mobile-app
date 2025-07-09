@@ -48,7 +48,7 @@ class SplitDayThrough(models.Model):
         ordering = ['day_index']
     
     def __str__(self):
-        return f"{self.day_template} - {self.day_index}"
+        return f"{self.split} - {self.day_template} - {self.day_index}"
 
 class DayPatternThrough(models.Model):
     day_template = models.ForeignKey(WorkoutDayTemplate, on_delete=models.CASCADE)
@@ -59,7 +59,7 @@ class DayPatternThrough(models.Model):
         ordering = ['pattern_index']
 
     def __str__(self):
-        return f"{self.pattern} - {self.pattern_index}"
+        return f"{self.day_template} - {self.pattern} - {self.pattern_index}"
 
 
 

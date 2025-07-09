@@ -7,7 +7,7 @@ class PlannedExerciseSerializer(serializers.ModelSerializer):
         fields = ("name", "sets", "start_reps", "end_reps", "skip")
 
 class WorkoutDaySerializer(serializers.ModelSerializer):
-    exercises = PlannedExerciseSerializer(many=True, source="exercises")
+    exercises = PlannedExerciseSerializer(many=True)
 
     class Meta:
         model = WorkoutDay
