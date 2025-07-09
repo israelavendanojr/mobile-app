@@ -1,4 +1,4 @@
-import PlanPreviewScreen from '../../screens/onboarding/PlanPreviewScreen';
+import PlanPreviewScreen from '../../screens/generator/PlanPreviewScreen';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function PlanPreviewRoute() {

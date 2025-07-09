@@ -38,3 +38,10 @@ def save_plan(request):
 
     output = WorkoutPlanSerializer(plan)
     return Response(output.data, status=status.HTTP_201_CREATED)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_saved_plans(request):
+    plans = WorkoutPlan.objects.filter(user=request.user)
+    serializer = WorkoutPlanSerializer(plans, many=True)
+    return Response(serializer.data)

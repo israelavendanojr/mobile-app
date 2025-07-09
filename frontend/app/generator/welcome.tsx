@@ -1,4 +1,4 @@
-import WelcomeScreen from '../../screens/onboarding/WelcomeScreen';
+import WelcomeScreen from '../../screens/generator/WelcomeScreen';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function WelcomeRoute() {
