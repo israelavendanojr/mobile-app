@@ -7,7 +7,8 @@ import {
   ActivityIndicator, 
   Alert,
   TextInput,
-  Modal
+  Modal,
+  Dimensions
 } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../api/api';
@@ -63,6 +64,9 @@ export default function WorkoutLogScreen() {
     exerciseIndex: number;
     set: SetLog;
   } | null>(null);
+
+  const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
+
 
   useEffect(() => {
     initializeWeekView();
@@ -454,80 +458,159 @@ export default function WorkoutLogScreen() {
     );
   };
 
-  const renderSet = (set: SetLog, setIndex: number, exerciseIndex: number) => {
+  const renderWorkoutDayCard = (workoutLog: WorkoutLog) => {
+    const totalSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+    const targetSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.target_sets, 0);
+    const completionPercentage = targetSets > 0 ? Math.round((totalSets / targetSets) * 100) : 0;
+
     return (
-      <View key={setIndex} className="flex-row items-center bg-white rounded-lg p-3 mb-2 border border-gray-100">
-        <View className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center mr-3">
-          <Text className="text-sm font-semibold text-gray-600">{set.set_number}</Text>
-        </View>
-        
-        <TouchableOpacity
-          className="flex-1 flex-row items-center justify-between"
-          onPress={() => openSetEditor(exerciseIndex, setIndex)}
-        >
-          <View className="flex-1">
-            <Text className="text-base font-medium text-gray-800">
-              {set.weight}lbs × {set.reps} reps
-            </Text>
-            {set.rpe && (
-              <Text className="text-sm text-gray-500 mt-1">
-                RPE: {set.rpe}/10
+      <View className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-gray-100">
+        {/* Header */}
+        <View className="px-6 py-4 border-b border-gray-100">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-2xl font-bold text-gray-900">
+                {workoutLog.workout_day?.day_name || 'Workout'}
               </Text>
-            )}
+              <Text className="text-sm text-gray-500 mt-1">
+                {workoutLog.exercises.length} exercises
+              </Text>
+            </View>
+            <View className="items-end">
+              <View className={`px-3 py-1 rounded-full ${
+                workoutLog.is_complete 
+                  ? 'bg-green-100' 
+                  : 'bg-blue-100'
+              }`}>
+                <Text className={`text-sm font-semibold ${
+                  workoutLog.is_complete 
+                    ? 'text-green-700' 
+                    : 'text-blue-700'
+                }`}>
+                  {workoutLog.is_complete ? 'Complete' : 'In Progress'}
+                </Text>
+              </View>
+            </View>
           </View>
-          <Text className="text-gray-400">›</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          className="ml-3 w-8 h-8 items-center justify-center"
-          onPress={() => removeSet(exerciseIndex, setIndex)}
-        >
-          <Text className="text-red-500 text-lg">×</Text>
-        </TouchableOpacity>
+        </View>
+
+        {/* Progress Bar */}
+        <View className="px-6 py-4">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-sm font-medium text-gray-600">Progress</Text>
+            <Text className="text-sm font-bold text-gray-900">{completionPercentage}%</Text>
+          </View>
+          <View className="w-full bg-gray-200 rounded-full h-2">
+            <View 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${completionPercentage}%` }}
+            />
+          </View>
+          <Text className="text-xs text-gray-500 mt-1">
+            {totalSets} of {targetSets} sets completed
+          </Text>
+        </View>
       </View>
     );
   };
 
-  const renderExercise = (exercise: ExerciseLog, exerciseIndex: number) => {
+  const renderExerciseCard = (exercise: ExerciseLog, exerciseIndex: number) => {
     const completedSets = exercise.sets.length;
     const targetSets = exercise.target_sets;
-    
+    const isComplete = completedSets >= targetSets;
+
     return (
-      <View key={exerciseIndex} className="mb-6">
-        <View className="bg-white rounded-xl p-4 mb-3 border border-gray-100">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-gray-800 flex-1">
-              {exercise.name}
-            </Text>
-            <View className="flex-row items-center space-x-2">
-              <Text className={`text-sm font-medium px-2 py-1 rounded-full ${
-                completedSets >= targetSets 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-orange-100 text-orange-700'
-              }`}>
-                {completedSets}/{targetSets}
+      <View key={exerciseIndex} className="bg-white mx-4 mb-4 rounded-2xl shadow-sm border border-gray-100">
+        {/* Exercise Header */}
+        <View className="px-6 py-4 border-b border-gray-100">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-xl font-bold text-gray-900 mb-1">
+                {exercise.name}
+              </Text>
+              <Text className="text-sm text-gray-500">
+                Target: {targetSets} sets × {exercise.target_reps} reps
               </Text>
             </View>
+            <View className="items-end">
+              <View className={`px-3 py-1 rounded-full ${
+                isComplete 
+                  ? 'bg-green-100' 
+                  : completedSets > 0 
+                    ? 'bg-orange-100' 
+                    : 'bg-gray-100'
+              }`}>
+                <Text className={`text-sm font-semibold ${
+                  isComplete 
+                    ? 'text-green-700' 
+                    : completedSets > 0 
+                      ? 'text-orange-700' 
+                      : 'text-gray-600'
+                }`}>
+                  {completedSets}/{targetSets}
+                </Text>
+              </View>
+            </View>
           </View>
-          
-          <Text className="text-sm text-gray-600">
-            Target: {targetSets} sets × {exercise.target_reps} reps
-          </Text>
         </View>
 
-        <View className="space-y-2">
-          {exercise.sets.map((set, setIndex) => 
-            renderSet(set, setIndex, exerciseIndex)
+        {/* Sets */}
+        <View className="px-6 py-4">
+          {exercise.sets.length > 0 ? (
+            <View className="space-y-3">
+              {exercise.sets.map((set, setIndex) => (
+                <View key={setIndex} className="flex-row items-center bg-gray-50 rounded-xl p-4">
+                  <View className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center mr-4">
+                    <Text className="text-sm font-bold text-white">{set.set_number}</Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    className="flex-1 flex-row items-center justify-between"
+                    onPress={() => openSetEditor(exerciseIndex, setIndex)}
+                  >
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-gray-900">
+                        {set.weight}lbs × {set.reps} reps
+                      </Text>
+                      {set.rpe && (
+                        <Text className="text-sm text-gray-500 mt-1">
+                          RPE: {set.rpe}/10
+                        </Text>
+                      )}
+                    </View>
+                    <View className="w-8 h-8 items-center justify-center">
+                      <Text className="text-gray-400 text-lg">›</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    className="ml-3 w-8 h-8 items-center justify-center"
+                    onPress={() => removeSet(exerciseIndex, setIndex)}
+                  >
+                    <Text className="text-red-500 text-xl font-bold">×</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View className="py-8 items-center">
+              <Text className="text-gray-500 text-center mb-4">
+                No sets logged yet
+              </Text>
+            </View>
           )}
         </View>
 
-        <TouchableOpacity
-          className="mt-3 bg-blue-500 p-4 rounded-xl flex-row items-center justify-center"
-          onPress={() => addSet(exerciseIndex)}
-        >
-          <Text className="text-white font-medium text-base mr-2">+</Text>
-          <Text className="text-white font-medium text-base">Add Set</Text>
-        </TouchableOpacity>
+        {/* Add Set Button */}
+        <View className="px-6 pb-6">
+          <TouchableOpacity
+            className="bg-blue-500 py-4 rounded-xl flex-row items-center justify-center"
+            onPress={() => addSet(exerciseIndex)}
+          >
+            <Text className="text-white font-semibold text-lg mr-2">+</Text>
+            <Text className="text-white font-semibold text-lg">Add Set</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -574,32 +657,70 @@ export default function WorkoutLogScreen() {
 
     return (
       <View className="flex-1">
-        {/* Workout Day Header */}
-        <View className="bg-white mx-4 mt-4 p-4 rounded-xl border border-gray-100">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-gray-800">
-              {currentLog.workout_day?.day_name || 'Workout'}
-            </Text>
-            <View className={`px-3 py-1 rounded-full ${
-              currentLog.is_complete 
-                ? 'bg-green-100' 
-                : 'bg-blue-100'
-            }`}>
-              <Text className={`text-sm font-medium ${
-                currentLog.is_complete 
-                  ? 'text-green-700' 
-                  : 'text-blue-700'
-              }`}>
-                {currentLog.is_complete ? 'Completed' : 'In Progress'}
-              </Text>
-            </View>
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Workout Day Card */}
+          {renderWorkoutDayCard(currentLog)}
+
+          {/* Exercise Cards */}
+          <View className="mt-6">
+            
+          {/* Swipe Hint */}
+          <Text className="text-sm text-gray-400 text-center mb-2">
+            Swipe to view more exercises →
+          </Text>
+
+          {/* Horizontal ScrollView for exercises */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x /
+                Dimensions.get('window').width
+              );
+              setActiveExerciseIndex(index);
+            }}
+            scrollEventThrottle={16}
+          >
+            {currentLog.exercises.map((exercise, index) => {
+              const screenWidth = Dimensions.get('window').width;
+              const sidePadding = 16;
+
+              return (
+                <View
+                  key={index}
+                  style={{
+                    width: screenWidth,
+                    paddingLeft: index === 0 ? sidePadding : 0,
+                    paddingRight: index === currentLog.exercises.length - 1 ? sidePadding : 0,
+                  }}
+                >
+                  {renderExerciseCard(exercise, index)}
+                </View>
+              );
+            })}
+          </ScrollView>
+
+
+          {/* Scroll indicator dots */}
+          <View className="flex-row justify-center mt-3">
+            {currentLog.exercises.map((_, idx) => (
+              <View
+                key={idx}
+                className={`w-2 h-2 mx-1 rounded-full ${
+                  idx === activeExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
+                }`}
+              />
+            ))}
           </View>
         </View>
 
-        <ScrollView className="flex-1 px-4 py-4">
-          {currentLog.exercises.map((exercise, index) => 
-            renderExercise(exercise, index)
-          )}
+          
+
+
+          {/* Bottom padding for action buttons */}
+          <View className="h-24" />
         </ScrollView>
       </View>
     );
@@ -614,20 +735,20 @@ export default function WorkoutLogScreen() {
     }
 
     return (
-      <View className="bg-white border-t border-gray-100 px-4 py-4">
+      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4">
         <View className="flex-row space-x-3">
           <TouchableOpacity
-            className="flex-1 bg-gray-100 p-4 rounded-xl"
+            className="flex-1 bg-gray-100 py-4 rounded-xl"
             onPress={saveProgress}
             disabled={saving}
           >
-            <Text className="text-gray-700 text-center font-medium">
+            <Text className="text-gray-700 text-center font-semibold">
               {saving ? 'Saving...' : 'Save Progress'}
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            className={`flex-1 p-4 rounded-xl ${
+            className={`flex-1 py-4 rounded-xl ${
               currentLog.is_complete 
                 ? 'bg-green-100' 
                 : 'bg-green-500'
@@ -635,7 +756,7 @@ export default function WorkoutLogScreen() {
             onPress={submitWorkout}
             disabled={saving || currentLog.is_complete}
           >
-            <Text className={`text-center font-medium ${
+            <Text className={`text-center font-semibold ${
               currentLog.is_complete 
                 ? 'text-green-700' 
                 : 'text-white'
