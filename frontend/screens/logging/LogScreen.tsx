@@ -1,56 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  ActivityIndicator, 
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
   Alert,
-  TextInput,
-  Modal,
-  Dimensions
+  Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import api from '../../api/api';
 import { useAuth } from '../../context/AuthContext';
-
-interface SetLog {
-  id?: number;
-  set_number: number;
-  weight: number;
-  reps: number;
-  rpe?: number;
-  notes?: string;
-  source: 'manual' | 'auto';
-}
-
-interface ExerciseLog {
-  id?: number;
-  name: string;
-  target_sets: number;
-  target_reps: number;
-  sets: SetLog[];
-}
-
-interface WorkoutLog {
-  id?: number;
-  date: string;
-  is_complete: boolean;
-  workout_day?: {
-    day_name: string;
-    order: number;
-  };
-  exercises: ExerciseLog[];
-}
-
-interface WeekDay {
-  date: string;
-  dayName: string;
-  isToday: boolean;
-  isPast: boolean;
-  isFuture: boolean;
-  workoutLog?: WorkoutLog;
-}
+import WeekNavBar from '@/components/logging/WeekNavBar';
+import DayOverviewCard from '@/components/logging/DayOverviewCard';
+import ExerciseCard from '@/components/logging/ExerciseCard';
+import SetEditorModal from '@/components/logging/SetEditorModal';
+import WorkoutActions from '@/components/logging/WorkoutActions';
+import { SetLog, WorkoutLog, WeekDay } from '@/types/logging';
 
 export default function WorkoutLogScreen() {
   const { authState } = useAuth();
@@ -64,9 +30,7 @@ export default function WorkoutLogScreen() {
     exerciseIndex: number;
     set: SetLog;
   } | null>(null);
-
   const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
-
 
   useEffect(() => {
     initializeWeekView();
@@ -80,7 +44,7 @@ export default function WorkoutLogScreen() {
     const updatedDays = [...weekDays];
     updatedDays[selectedDayIndex] = {
       ...updatedDays[selectedDayIndex],
-      workoutLog: updatedLog
+      workoutLog: updatedLog,
     };
     setWeekDays(updatedDays);
   };
@@ -100,9 +64,7 @@ export default function WorkoutLogScreen() {
       const dateString = date.toISOString().split('T')[0];
       const isToday = dateString === today.toISOString().split('T')[0];
 
-      if (isToday) {
-        todayIndex = i;
-      }
+      if (isToday) todayIndex = i;
 
       days.push({
         date: dateString,
@@ -110,7 +72,7 @@ export default function WorkoutLogScreen() {
         isToday,
         isPast: date < today && !isToday,
         isFuture: date > today,
-        workoutLog: undefined
+        workoutLog: undefined,
       });
     }
 
@@ -143,20 +105,12 @@ export default function WorkoutLogScreen() {
           isToday,
           isPast: date < today && !isToday,
           isFuture: date > today,
-          workoutLog: matchedLog
-            ? {
-                ...matchedLog,
-                is_complete: matchedLog.is_complete,
-                workout_day: matchedLog.workout_day,
-                exercises: matchedLog.exercises,
-                id: matchedLog.id
-              }
-            : undefined
+          workoutLog: matchedLog ?? undefined,
         };
       });
 
       setWeekDays(days);
-      setSelectedDayIndex(days.findIndex(d => d.isToday));
+      setSelectedDayIndex(days.findIndex((d) => d.isToday));
     } catch (err) {
       console.error('Failed to load week log:', err);
       setError('Could not load weekly workout log.');
@@ -165,7 +119,7 @@ export default function WorkoutLogScreen() {
     }
   };
 
-  const selectDay = async (dayIndex: number) => {
+  const selectDay = (dayIndex: number) => {
     if (dayIndex === selectedDayIndex) return;
     setSelectedDayIndex(dayIndex);
   };
@@ -176,18 +130,22 @@ export default function WorkoutLogScreen() {
 
     const updatedLog = { ...currentLog };
     const exercise = updatedLog.exercises[exerciseIndex];
-    
-    const lastSetNumber = exercise.sets.length > 0 
-      ? Math.max(...exercise.sets.map(s => s.set_number))
-      : 0;
-    
+
+    const lastSetNumber =
+      exercise.sets.length > 0
+        ? Math.max(...exercise.sets.map((s) => s.set_number))
+        : 0;
+
     const newSet: SetLog = {
       set_number: lastSetNumber + 1,
-      weight: exercise.sets.length > 0 ? exercise.sets[exercise.sets.length - 1].weight : 0,
+      weight:
+        exercise.sets.length > 0
+          ? exercise.sets[exercise.sets.length - 1].weight
+          : 0,
       reps: exercise.target_reps,
       rpe: undefined,
       notes: '',
-      source: 'manual'
+      source: 'manual',
     };
 
     exercise.sets.push(newSet);
@@ -198,39 +156,32 @@ export default function WorkoutLogScreen() {
     const currentLog = getCurrentWorkoutLog();
     if (!currentLog) return;
 
-    Alert.alert(
-      'Remove Set',
-      'Are you sure you want to remove this set?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Remove', 
-          style: 'destructive',
-          onPress: () => {
-            const updatedLog = { ...currentLog };
-            updatedLog.exercises[exerciseIndex].sets.splice(setIndex, 1);
-            
-            // Renumber the remaining sets
-            updatedLog.exercises[exerciseIndex].sets.forEach((set, idx) => {
-              set.set_number = idx + 1;
-            });
-            
-            updateCurrentWorkoutLog(updatedLog);
-          }
+    Alert.alert('Remove Set', 'Are you sure you want to remove this set?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: () => {
+          const updatedLog = { ...currentLog };
+          updatedLog.exercises[exerciseIndex].sets.splice(setIndex, 1);
+          updatedLog.exercises[exerciseIndex].sets.forEach((set, idx) => {
+            set.set_number = idx + 1;
+          });
+          updateCurrentWorkoutLog(updatedLog);
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const openSetEditor = (exerciseIndex: number, setIndex: number) => {
     const currentLog = getCurrentWorkoutLog();
     if (!currentLog) return;
-    
+
     const set = currentLog.exercises[exerciseIndex].sets[setIndex];
     setEditingSet({
       exerciseIndex,
       setIndex,
-      set: { ...set }
+      set: { ...set },
     });
   };
 
@@ -239,8 +190,9 @@ export default function WorkoutLogScreen() {
     if (!editingSet || !currentLog) return;
 
     const updatedLog = { ...currentLog };
-    updatedLog.exercises[editingSet.exerciseIndex].sets[editingSet.setIndex] = editingSet.set;
-    
+    updatedLog.exercises[editingSet.exerciseIndex].sets[editingSet.setIndex] =
+      editingSet.set;
+
     updateCurrentWorkoutLog(updatedLog);
     setEditingSet(null);
   };
@@ -249,44 +201,26 @@ export default function WorkoutLogScreen() {
     const currentLog = getCurrentWorkoutLog();
     if (!currentLog) return;
 
-    Alert.alert(
-      'Complete Workout',
-      'Are you sure you want to mark this workout as complete?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Complete', 
-          onPress: async () => {
-            try {
-              setSaving(true);
-              
-              const submitData = {
-                ...currentLog,
-                is_complete: true
-              };
-
-              await api.post(`/api/workout/log/day/${currentLog.id}/submit/`, submitData);
-              
-              // Update the local state
-              updateCurrentWorkoutLog(submitData);
-              
-              Alert.alert(
-                'Workout Completed!',
-                'Great job! Your workout has been logged successfully.'
-              );
-            } catch (err: any) {
-              console.error('Error submitting workout:', err);
-              Alert.alert(
-                'Error',
-                err.response?.data?.error || 'Failed to submit workout'
-              );
-            } finally {
-              setSaving(false);
-            }
+    Alert.alert('Complete Workout', 'Are you sure you want to mark this workout as complete?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Complete',
+        onPress: async () => {
+          try {
+            setSaving(true);
+            const submitData = { ...currentLog, is_complete: true };
+            await api.post(`/api/workout/log/day/${currentLog.id}/submit/`, submitData);
+            updateCurrentWorkoutLog(submitData);
+            Alert.alert('Workout Completed!', 'Great job! Your workout has been logged successfully.');
+          } catch (err: any) {
+            console.error('Error submitting workout:', err);
+            Alert.alert('Error', err.response?.data?.error || 'Failed to submit workout');
+          } finally {
+            setSaving(false);
           }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const saveProgress = async () => {
@@ -295,536 +229,14 @@ export default function WorkoutLogScreen() {
 
     try {
       setSaving(true);
-      
       await api.post('/api/workout/log/submit/', currentLog);
-      
       Alert.alert('Progress Saved', 'Your workout progress has been saved.');
     } catch (err: any) {
       console.error('Error saving progress:', err);
-      Alert.alert(
-        'Error',
-        err.response?.data?.error || 'Failed to save progress'
-      );
+      Alert.alert('Error', err.response?.data?.error || 'Failed to save progress');
     } finally {
       setSaving(false);
     }
-  };
-
-  const renderWeekNavigation = () => {
-    return (
-      <View className="bg-white px-4 py-3 border-b border-gray-100">
-        <Text className="text-lg font-semibold text-gray-800 mb-3">Week 3 (Sun. July 5)</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row space-x-3">
-            {weekDays.map((day, index) => {
-              const isSelected = index === selectedDayIndex;
-              const hasWorkout = !!day.workoutLog;
-              const isComplete = day.workoutLog?.is_complete;
-              
-              return (
-                <TouchableOpacity
-                  key={day.date}
-                  className={`w-14 h-14 rounded-xl items-center justify-center ${
-                    isSelected 
-                      ? 'bg-blue-500' 
-                      : hasWorkout 
-                        ? 'bg-green-50 border-2 border-green-200' 
-                        : 'bg-gray-50 border border-gray-200'
-                  }`}
-                  onPress={() => selectDay(index)}
-                >
-                  <Text className={`text-xs font-medium ${
-                    isSelected 
-                      ? 'text-white' 
-                      : hasWorkout 
-                        ? 'text-green-700' 
-                        : 'text-gray-600'
-                  }`}>
-                    {day.dayName}
-                  </Text>
-                  <Text className={`text-lg font-bold ${
-                    isSelected 
-                      ? 'text-white' 
-                      : hasWorkout 
-                        ? 'text-green-700' 
-                        : 'text-gray-800'
-                  }`}>
-                    {new Date(day.date).getDate()}
-                  </Text>
-                  {isComplete && (
-                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full items-center justify-center">
-                      <Text className="text-white text-xs">✓</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const renderSetEditor = () => {
-    if (!editingSet) return null;
-
-    return (
-      <Modal
-        visible={true}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditingSet(null)}
-      >
-        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-white p-6 rounded-lg w-80 max-w-full">
-            <Text className="text-xl font-bold mb-4 text-center">
-              Edit Set {editingSet.set.set_number}
-            </Text>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Weight</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded text-center"
-                value={editingSet.set.weight.toString()}
-                onChangeText={(text) => setEditingSet(prev => prev ? {
-                  ...prev,
-                  set: { ...prev.set, weight: parseFloat(text) || 0 }
-                } : null)}
-                keyboardType="numeric"
-                placeholder="Weight"
-              />
-            </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">Reps</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded text-center"
-                value={editingSet.set.reps.toString()}
-                onChangeText={(text) => setEditingSet(prev => prev ? {
-                  ...prev,
-                  set: { ...prev.set, reps: parseInt(text) || 0 }
-                } : null)}
-                keyboardType="numeric"
-                placeholder="Reps"
-              />
-            </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2">RPE (Optional)</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded text-center"
-                value={editingSet.set.rpe?.toString() || ''}
-                onChangeText={(text) => setEditingSet(prev => prev ? {
-                  ...prev,
-                  set: { ...prev.set, rpe: text ? parseFloat(text) : undefined }
-                } : null)}
-                keyboardType="numeric"
-                placeholder="Rate of Perceived Exertion (1-10)"
-              />
-            </View>
-            
-            <View className="mb-6">
-              <Text className="text-gray-700 mb-2">Notes (Optional)</Text>
-              <TextInput
-                className="border border-gray-300 p-3 rounded"
-                value={editingSet.set.notes || ''}
-                onChangeText={(text) => setEditingSet(prev => prev ? {
-                  ...prev,
-                  set: { ...prev.set, notes: text }
-                } : null)}
-                placeholder="Any notes about this set..."
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-            
-            <View className="flex-row space-x-3">
-              <TouchableOpacity
-                className="flex-1 bg-gray-500 p-3 rounded"
-                onPress={() => setEditingSet(null)}
-              >
-                <Text className="text-white text-center font-medium">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 bg-blue-500 p-3 rounded"
-                onPress={saveSetEdit}
-              >
-                <Text className="text-white text-center font-medium">Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const renderWorkoutDayCard = (workoutLog: WorkoutLog) => {
-    const totalSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-    const targetSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.target_sets, 0);
-    const completionPercentage = targetSets > 0 ? Math.round((totalSets / targetSets) * 100) : 0;
-
-    return (
-      <View className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-gray-100">
-        {/* Header */}
-        <View className="px-6 py-4 border-b border-gray-100">
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-2xl font-bold text-gray-900">
-                {workoutLog.workout_day?.day_name || 'Workout'}
-              </Text>
-              <Text className="text-sm text-gray-500 mt-1">
-                {workoutLog.exercises.length} exercises
-              </Text>
-            </View>
-            <View className="items-end">
-              <View className={`px-3 py-1 rounded-full ${
-                workoutLog.is_complete 
-                  ? 'bg-green-100' 
-                  : 'bg-blue-100'
-              }`}>
-                <Text className={`text-sm font-semibold ${
-                  workoutLog.is_complete 
-                    ? 'text-green-700' 
-                    : 'text-blue-700'
-                }`}>
-                  {workoutLog.is_complete ? 'Complete' : 'In Progress'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Progress Bar */}
-        <View className="px-6 py-4">
-          <View className="flex-row items-center justify-between mb-2">
-            <Text className="text-sm font-medium text-gray-600">Progress</Text>
-            <Text className="text-sm font-bold text-gray-900">{completionPercentage}%</Text>
-          </View>
-          <View className="w-full bg-gray-200 rounded-full h-2">
-            <View 
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${completionPercentage}%` }}
-            />
-          </View>
-          <Text className="text-xs text-gray-500 mt-1">
-            {totalSets} of {targetSets} sets completed
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  const renderExerciseCard = (exercise: ExerciseLog, exerciseIndex: number) => {
-    const completedSets = exercise.sets.length;
-    const targetSets = exercise.target_sets;
-    const isComplete = completedSets >= targetSets;
-  
-    // Mock data for demonstration - in real app, this would come from your exercise database
-    const exerciseDetails = {
-      image: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=Exercise+Form',
-      targetMuscles: ['Chest', 'Shoulders', 'Triceps'], // This would be dynamic based on exercise
-    };
-  
-    return (
-      <View key={exerciseIndex} className="bg-white mx-4 mb-4 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Exercise Header */}
-        <View className="px-6 py-4 border-b border-gray-100">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-gray-900">
-              {exercise.name}
-            </Text>
-            <View className={`px-3 py-1 rounded-full ${
-              isComplete 
-                ? 'bg-green-500' 
-                : completedSets > 0 
-                  ? 'bg-orange-500' 
-                  : 'bg-gray-500'
-            }`}>
-              <Text className="text-white text-sm font-semibold">
-                {completedSets}/{targetSets}
-              </Text>
-            </View>
-          </View>
-        </View>
-  
-        {/* Target Muscles */}
-        <View className="px-6 py-4 border-b border-gray-100">
-          <Text className="text-sm font-semibold text-gray-700 mb-2">Target Muscles</Text>
-          <View className="flex-row flex-wrap">
-            {exerciseDetails.targetMuscles.map((muscle, index) => (
-              <View key={index} className="bg-blue-50 px-3 py-1 rounded-full mr-2 mb-2">
-                <Text className="text-blue-700 text-sm font-medium">{muscle}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-  
-        
-  
-        {/* Inner Logging Card */}
-        <View className="p-4">
-          
-
-          <View className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-           
-          
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-lg font-bold text-gray-900">Your Log</Text>
-              <View className={`px-3 py-1 rounded-full ${
-                isComplete 
-                  ? 'bg-green-100' 
-                  : completedSets > 0 
-                    ? 'bg-orange-100' 
-                    : 'bg-gray-100'
-              }`}>
-                <Text className={`text-sm font-semibold ${
-                  isComplete 
-                    ? 'text-green-700' 
-                    : completedSets > 0 
-                      ? 'text-orange-700' 
-                      : 'text-gray-600'
-                }`}>
-                  {isComplete ? 'Complete' : completedSets > 0 ? 'In Progress' : 'Not Started'}
-                </Text>
-              </View>
-            </View>
-            {/* Target Info */}
-          <View className="px-6 py-3 bg-gray-50 border-b border-gray-100">
-            <Text className="text-sm text-gray-600 text-center">
-              <Text className="font-semibold">Target:</Text> {targetSets} sets × {exercise.target_reps} reps
-            </Text>
-          </View>
-  
-            {/* Sets */}
-            {exercise.sets.length > 0 ? (
-              <View className="space-y-3 mb-4">
-                {exercise.sets.map((set, setIndex) => (
-                  <View key={setIndex} className="flex-row items-center bg-white rounded-lg p-3 shadow-sm">
-                    <View className="w-8 h-8 bg-blue-500 rounded-full items-center justify-center mr-3">
-                      <Text className="text-sm font-bold text-white">{set.set_number}</Text>
-                    </View>
-                    
-                    <TouchableOpacity
-                      className="flex-1 flex-row items-center justify-between"
-                      onPress={() => openSetEditor(exerciseIndex, setIndex)}
-                    >
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold text-gray-900">
-                          {set.weight}lbs × {set.reps} reps
-                        </Text>
-                        {set.rpe && (
-                          <Text className="text-sm text-gray-500 mt-1">
-                            RPE: {set.rpe}/10
-                          </Text>
-                        )}
-                        {set.notes && (
-                          <Text className="text-xs text-gray-400 mt-1 italic">
-                            {set.notes}
-                          </Text>
-                        )}
-                      </View>
-                      <View className="w-6 h-6 items-center justify-center">
-                        <Text className="text-gray-400 text-lg">›</Text>
-                      </View>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      className="ml-3 w-8 h-8 items-center justify-center"
-                      onPress={() => removeSet(exerciseIndex, setIndex)}
-                    >
-                      <Text className="text-red-500 text-lg font-bold">×</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View className="py-6 items-center">
-                <Text className="text-gray-500 text-center mb-2">
-                  No sets logged yet
-                </Text>
-                <Text className="text-gray-400 text-sm text-center">
-                  Tap "Add Set" to get started
-                </Text>
-              </View>
-            )}
-  
-            {/* Add Set Button */}
-            <TouchableOpacity
-              className="bg-blue-500 py-3 rounded-lg flex-row items-center justify-center"
-              onPress={() => addSet(exerciseIndex)}
-            >
-              <Text className="text-white font-semibold text-base mr-2">+</Text>
-              <Text className="text-white font-semibold text-base">Add Set</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-  
-        {/* Form Image at Bottom */}
-        <View className="mx-4 mb-4">
-          <View className="h-40 bg-gray-100 rounded-xl items-center justify-center">
-            {/* In a real app, you'd use an Image component here */}
-            <View className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 items-center justify-center rounded-xl">
-              <Text className="text-white text-5xl">💪</Text>
-              <Text className="text-white text-sm mt-2 font-medium">Form Demo</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderWorkoutContent = () => {
-    const currentLog = getCurrentWorkoutLog();
-    const selectedDay = weekDays[selectedDayIndex];
-    
-    if (!selectedDay) return null;
-
-    if (selectedDay.isFuture) {
-      return (
-        <View className="flex-1 justify-center items-center p-6">
-          <Text className="text-gray-500 text-lg text-center">
-            This workout is scheduled for the future.
-          </Text>
-          <Text className="text-gray-400 text-center mt-2">
-            Come back on {selectedDay.dayName} to log your workout!
-          </Text>
-        </View>
-      );
-    }
-
-    if (!currentLog) {
-      return (
-        <View className="flex-1 justify-center items-center p-6">
-          <Text className="text-gray-500 text-lg text-center mb-4">
-            No workout logged for {selectedDay.dayName}
-          </Text>
-          {selectedDay.isToday && (
-            <TouchableOpacity
-              className="bg-blue-500 px-6 py-3 rounded-lg"
-              onPress={() => {
-                // This would trigger creating a new workout log
-                // You might want to add this functionality
-              }}
-            >
-              <Text className="text-white font-medium">Start Today's Workout</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      );
-    }
-
-    return (
-      <View className="flex-1">
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Workout Day Card */}
-          {renderWorkoutDayCard(currentLog)}
-
-          {/* Exercise Cards */}
-          <View className="mt-6">
-            
-          {/* Swipe Hint */}
-          <Text className="text-sm text-gray-400 text-center mb-2">
-            Swipe to view more exercises →
-          </Text>
-
-          {/* Horizontal ScrollView for exercises */}
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x /
-                Dimensions.get('window').width
-              );
-              setActiveExerciseIndex(index);
-            }}
-            scrollEventThrottle={16}
-          >
-            {currentLog.exercises.map((exercise, index) => {
-              const screenWidth = Dimensions.get('window').width;
-              const sidePadding = 16;
-
-              return (
-                <View
-                  key={index}
-                  style={{
-                    width: screenWidth,
-                    paddingLeft: index === 0 ? sidePadding : 0,
-                    paddingRight: index === currentLog.exercises.length - 1 ? sidePadding : 0,
-                  }}
-                >
-                  {renderExerciseCard(exercise, index)}
-                </View>
-              );
-            })}
-          </ScrollView>
-
-
-          {/* Scroll indicator dots */}
-          <View className="flex-row justify-center mt-3">
-            {currentLog.exercises.map((_, idx) => (
-              <View
-                key={idx}
-                className={`w-2 h-2 mx-1 rounded-full ${
-                  idx === activeExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </View>
-        </View>
-
-          
-
-
-          {/* Bottom padding for action buttons */}
-          <View className="h-24" />
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const renderActionButtons = () => {
-    const currentLog = getCurrentWorkoutLog();
-    const selectedDay = weekDays[selectedDayIndex];
-    
-    if (!currentLog || selectedDay?.isFuture) {
-      return null;
-    }
-
-    return (
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4">
-        <View className="flex-row space-x-3">
-          <TouchableOpacity
-            className="flex-1 bg-gray-100 py-4 rounded-xl"
-            onPress={saveProgress}
-            disabled={saving}
-          >
-            <Text className="text-gray-700 text-center font-semibold">
-              {saving ? 'Saving...' : 'Save Progress'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            className={`flex-1 py-4 rounded-xl ${
-              currentLog.is_complete 
-                ? 'bg-green-100' 
-                : 'bg-green-500'
-            }`}
-            onPress={submitWorkout}
-            disabled={saving || currentLog.is_complete}
-          >
-            <Text className={`text-center font-semibold ${
-              currentLog.is_complete 
-                ? 'text-green-700' 
-                : 'text-white'
-            }`}>
-              {currentLog.is_complete ? 'Completed ✓' : 'Complete Workout'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
   };
 
   if (loading && weekDays.length === 0) {
@@ -850,19 +262,113 @@ export default function WorkoutLogScreen() {
     );
   }
 
+  const currentLog = getCurrentWorkoutLog();
+  const selectedDay = weekDays[selectedDayIndex];
+
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Week Navigation */}
-      {renderWeekNavigation()}
+      <WeekNavBar
+        weekDays={weekDays}
+        selectedDayIndex={selectedDayIndex}
+        onSelectDay={selectDay}
+      />
 
-      {/* Workout Content */}
-      {renderWorkoutContent()}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {selectedDay?.isFuture ? (
+          <View className="flex-1 justify-center items-center p-6">
+            <Text className="text-gray-500 text-lg text-center">
+              This workout is scheduled for the future.
+            </Text>
+            <Text className="text-gray-400 text-center mt-2">
+              Come back on {selectedDay.dayName} to log your workout!
+            </Text>
+          </View>
+        ) : !currentLog ? (
+          <View className="flex-1 justify-center items-center p-6">
+            <Text className="text-gray-500 text-lg text-center mb-4">
+              No workout logged for {selectedDay?.dayName}
+            </Text>
+            {selectedDay?.isToday && (
+              <TouchableOpacity className="bg-blue-500 px-6 py-3 rounded-lg">
+                <Text className="text-white font-medium">Start Today's Workout</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <>
+            <DayOverviewCard workoutLog={currentLog} />
 
-      {/* Action Buttons */}
-      {renderActionButtons()}
+            <View className="mt-6">
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={(event) => {
+                  const index = Math.round(
+                    event.nativeEvent.contentOffset.x / Dimensions.get('window').width
+                  );
+                  setActiveExerciseIndex(index);
+                }}
+                scrollEventThrottle={16}
+              >
+                {currentLog.exercises.map((exercise, index) => {
+                  const screenWidth = Dimensions.get('window').width;
+                  const sidePadding = 16;
 
-      {/* Set Editor Modal */}
-      {renderSetEditor()}
+                  return (
+                    <View
+                      key={index}
+                      style={{
+                        width: screenWidth,
+                        paddingLeft: index === 0 ? sidePadding : 0,
+                        paddingRight:
+                          index === currentLog.exercises.length - 1 ? sidePadding : 0,
+                      }}
+                    >
+                      <ExerciseCard
+                        exercise={exercise}
+                        exerciseIndex={index}
+                        onAddSet={addSet}
+                        onEditSet={openSetEditor}
+                        onRemoveSet={removeSet}
+                      />
+                    </View>
+                  );
+                })}
+              </ScrollView>
+
+              <View className="flex-row justify-center mt-3">
+                {currentLog.exercises.map((_, idx) => (
+                  <View
+                    key={idx}
+                    className={`w-2 h-2 mx-1 rounded-full ${
+                      idx === activeExerciseIndex ? 'bg-blue-500' : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View className="h-24" />
+          </>
+        )}
+      </ScrollView>
+
+      <WorkoutActions
+        isComplete={currentLog?.is_complete ?? false}
+        saving={saving}
+        onSave={saveProgress}
+        onSubmit={submitWorkout}
+      />
+
+      <SetEditorModal
+        editingSet={editingSet}
+        onCancel={() => setEditingSet(null)}
+        onChange={(newSet) =>
+          setEditingSet((prev) => (prev ? { ...prev, set: newSet } : null))
+        }
+        onSave={saveSetEdit}
+      />
     </View>
   );
 }
