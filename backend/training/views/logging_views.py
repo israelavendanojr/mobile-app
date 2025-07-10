@@ -5,6 +5,7 @@ from rest_framework import status
 from datetime import date
 from training.models import WorkoutLog, WorkoutDayLog, ExerciseLog, SetLog, WorkoutDay, WorkoutPlan
 from training.serializers.logging_serializers import WorkoutLogSerializer
+from datetime import timedelta
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
