@@ -42,44 +42,151 @@ interface WorkoutLog {
   exercises: ExerciseLog[];
 }
 
+interface WeekDay {
+  date: string;
+  dayName: string;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+  workoutLog?: WorkoutLog;
+}
+
 export default function WorkoutLogScreen() {
   const { authState } = useAuth();
-  const [workoutLog, setWorkoutLog] = useState<WorkoutLog | null>(null);
+  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingSet, setEditingSet] = useState<{
-    exerciseIndex: number;
     setIndex: number;
+    exerciseIndex: number;
     set: SetLog;
   } | null>(null);
 
   useEffect(() => {
-    fetchTodayLog();
+    initializeWeekView();
   }, []);
 
-  const fetchTodayLog = async () => {
+  const initializeWeekView = () => {
+    const today = new Date();
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    
+    const days: WeekDay[] = [];
+    let todayIndex = 0;
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(currentWeekStart);
+      date.setDate(currentWeekStart.getDate() + i);
+      
+      const dateString = date.toISOString().split('T')[0];
+      const isToday = dateString === today.toISOString().split('T')[0];
+      
+      if (isToday) {
+        todayIndex = i;
+      }
+
+      days.push({
+        date: dateString,
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        isToday,
+        isPast: date < today && !isToday,
+        isFuture: date > today,
+        workoutLog: undefined
+      });
+    }
+
+    setWeekDays(days);
+    setSelectedDayIndex(todayIndex);
+    loadWeekLogs(days);
+  };
+
+  const loadWeekLogs = async (days: WeekDay[]) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/workout/log/');
-      setWorkoutLog(response.data);
+      // Load logs for each day of the week
+      const promises = days.map(async (day) => {
+        try {
+          const response = await api.get(`/api/workout/log/?date=${day.date}`);
+          return { ...day, workoutLog: response.data };
+        } catch (err: any) {
+          // If no log exists for this day, that's okay
+          if (err.response?.status === 404) {
+            return day;
+          }
+          throw err;
+        }
+      });
+
+      const updatedDays = await Promise.all(promises);
+      setWeekDays(updatedDays);
     } catch (err: any) {
-      console.error('Error fetching workout log:', err);
-      setError(err.response?.data?.error || 'Failed to fetch workout log');
+      console.error('Error loading week logs:', err);
+      setError('Failed to load workout logs for the week');
     } finally {
       setLoading(false);
     }
   };
 
-  const addSet = (exerciseIndex: number) => {
-    if (!workoutLog) return;
+  const loadDayLog = async (date: string) => {
+    try {
+      const response = await api.get(`/api/workout/log/?date=${date}`);
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
+  };
 
-    const updatedLog = { ...workoutLog };
+  const getCurrentWorkoutLog = (): WorkoutLog | null => {
+    return weekDays[selectedDayIndex]?.workoutLog || null;
+  };
+
+  const updateCurrentWorkoutLog = (updatedLog: WorkoutLog) => {
+    const updatedDays = [...weekDays];
+    updatedDays[selectedDayIndex] = {
+      ...updatedDays[selectedDayIndex],
+      workoutLog: updatedLog
+    };
+    setWeekDays(updatedDays);
+  };
+
+  const selectDay = async (dayIndex: number) => {
+    if (dayIndex === selectedDayIndex) return;
+
+    setSelectedDayIndex(dayIndex);
+    const day = weekDays[dayIndex];
+    
+    // If we don't have a log for this day and it's not in the future, try to load it
+    if (!day.workoutLog && !day.isFuture) {
+      try {
+        setLoading(true);
+        const log = await loadDayLog(day.date);
+        if (log) {
+          const updatedDays = [...weekDays];
+          updatedDays[dayIndex] = { ...day, workoutLog: log };
+          setWeekDays(updatedDays);
+        }
+      } catch (err: any) {
+        console.error('Error loading day log:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const addSet = (exerciseIndex: number) => {
+    const currentLog = getCurrentWorkoutLog();
+    if (!currentLog) return;
+
+    const updatedLog = { ...currentLog };
     const exercise = updatedLog.exercises[exerciseIndex];
     
-    // Find the last set to get the next set number
     const lastSetNumber = exercise.sets.length > 0 
       ? Math.max(...exercise.sets.map(s => s.set_number))
       : 0;
@@ -94,11 +201,12 @@ export default function WorkoutLogScreen() {
     };
 
     exercise.sets.push(newSet);
-    setWorkoutLog(updatedLog);
+    updateCurrentWorkoutLog(updatedLog);
   };
 
   const removeSet = (exerciseIndex: number, setIndex: number) => {
-    if (!workoutLog) return;
+    const currentLog = getCurrentWorkoutLog();
+    if (!currentLog) return;
 
     Alert.alert(
       'Remove Set',
@@ -109,7 +217,7 @@ export default function WorkoutLogScreen() {
           text: 'Remove', 
           style: 'destructive',
           onPress: () => {
-            const updatedLog = { ...workoutLog };
+            const updatedLog = { ...currentLog };
             updatedLog.exercises[exerciseIndex].sets.splice(setIndex, 1);
             
             // Renumber the remaining sets
@@ -117,7 +225,7 @@ export default function WorkoutLogScreen() {
               set.set_number = idx + 1;
             });
             
-            setWorkoutLog(updatedLog);
+            updateCurrentWorkoutLog(updatedLog);
           }
         },
       ]
@@ -125,9 +233,10 @@ export default function WorkoutLogScreen() {
   };
 
   const openSetEditor = (exerciseIndex: number, setIndex: number) => {
-    if (!workoutLog) return;
+    const currentLog = getCurrentWorkoutLog();
+    if (!currentLog) return;
     
-    const set = workoutLog.exercises[exerciseIndex].sets[setIndex];
+    const set = currentLog.exercises[exerciseIndex].sets[setIndex];
     setEditingSet({
       exerciseIndex,
       setIndex,
@@ -136,17 +245,19 @@ export default function WorkoutLogScreen() {
   };
 
   const saveSetEdit = () => {
-    if (!editingSet || !workoutLog) return;
+    const currentLog = getCurrentWorkoutLog();
+    if (!editingSet || !currentLog) return;
 
-    const updatedLog = { ...workoutLog };
+    const updatedLog = { ...currentLog };
     updatedLog.exercises[editingSet.exerciseIndex].sets[editingSet.setIndex] = editingSet.set;
     
-    setWorkoutLog(updatedLog);
+    updateCurrentWorkoutLog(updatedLog);
     setEditingSet(null);
   };
 
   const submitWorkout = async () => {
-    if (!workoutLog) return;
+    const currentLog = getCurrentWorkoutLog();
+    if (!currentLog) return;
 
     Alert.alert(
       'Complete Workout',
@@ -160,18 +271,18 @@ export default function WorkoutLogScreen() {
               setSaving(true);
               
               const submitData = {
-                ...workoutLog,
+                ...currentLog,
                 is_complete: true
               };
 
               await api.post('/api/workout/log/submit/', submitData);
               
+              // Update the local state
+              updateCurrentWorkoutLog(submitData);
+              
               Alert.alert(
                 'Workout Completed!',
-                'Great job! Your workout has been logged successfully.',
-                [
-                  { text: 'OK', onPress: () => router.back() }
-                ]
+                'Great job! Your workout has been logged successfully.'
               );
             } catch (err: any) {
               console.error('Error submitting workout:', err);
@@ -189,12 +300,13 @@ export default function WorkoutLogScreen() {
   };
 
   const saveProgress = async () => {
-    if (!workoutLog) return;
+    const currentLog = getCurrentWorkoutLog();
+    if (!currentLog) return;
 
     try {
       setSaving(true);
       
-      await api.post('/api/workout/log/submit/', workoutLog);
+      await api.post('/api/workout/log/submit/', currentLog);
       
       Alert.alert('Progress Saved', 'Your workout progress has been saved.');
     } catch (err: any) {
@@ -206,6 +318,61 @@ export default function WorkoutLogScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const renderWeekNavigation = () => {
+    return (
+      <View className="bg-white border-b border-gray-200 px-4 py-3">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View className="flex-row space-x-2">
+            {weekDays.map((day, index) => {
+              const isSelected = index === selectedDayIndex;
+              const hasWorkout = !!day.workoutLog;
+              const isComplete = day.workoutLog?.is_complete;
+              
+              return (
+                <TouchableOpacity
+                  key={day.date}
+                  className={`px-4 py-3 rounded-lg min-w-20 ${
+                    isSelected 
+                      ? 'bg-blue-500' 
+                      : hasWorkout 
+                        ? 'bg-green-50 border border-green-200' 
+                        : 'bg-gray-50 border border-gray-200'
+                  }`}
+                  onPress={() => selectDay(index)}
+                >
+                  <Text className={`text-center font-medium ${
+                    isSelected 
+                      ? 'text-white' 
+                      : hasWorkout 
+                        ? 'text-green-700' 
+                        : 'text-gray-600'
+                  }`}>
+                    {day.dayName}
+                  </Text>
+                  <Text className={`text-center text-sm ${
+                    isSelected 
+                      ? 'text-blue-100' 
+                      : 'text-gray-500'
+                  }`}>
+                    {new Date(day.date).getDate()}
+                  </Text>
+                  {day.isToday && (
+                    <View className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full" />
+                  )}
+                  {hasWorkout && (
+                    <View className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${
+                      isComplete ? 'bg-green-500' : 'bg-yellow-500'
+                    }`} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </View>
+    );
   };
 
   const renderSetEditor = () => {
@@ -376,88 +543,64 @@ export default function WorkoutLogScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Loading today's workout...</Text>
-      </View>
-    );
-  }
+  const renderWorkoutContent = () => {
+    const currentLog = getCurrentWorkoutLog();
+    const selectedDay = weekDays[selectedDayIndex];
+    
+    if (!selectedDay) return null;
 
-  if (error) {
-    return (
-      <View className="flex-1 justify-center items-center bg-gray-50 p-6">
-        <Text className="text-red-600 text-center mb-4 text-lg">{error}</Text>
-        <TouchableOpacity
-          onPress={fetchTodayLog}
-          className="bg-blue-500 px-6 py-3 rounded-lg"
-        >
-          <Text className="text-white font-medium">Try Again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (!workoutLog) {
-    return (
-      <View className="flex-1 justify-center items-center bg-gray-50 p-6">
-        <Text className="text-gray-600 text-center mb-4 text-lg">
-          No workout found for today
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="bg-blue-500 px-6 py-3 rounded-lg"
-        >
-          <Text className="text-white font-medium">Go Back</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const totalSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-  const targetSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.target_sets, 0);
-
-  return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <Text className="text-2xl font-bold text-gray-900">
-          {workoutLog.workout_day?.day_name || 'Today\'s Workout'}
-        </Text>
-        <Text className="text-gray-600 mt-1">
-          {new Date(workoutLog.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
-        </Text>
-        <View className="flex-row justify-between items-center mt-2">
-          <Text className="text-sm text-gray-500">
-            Progress: {totalSets}/{targetSets} sets
+    if (selectedDay.isFuture) {
+      return (
+        <View className="flex-1 justify-center items-center p-6">
+          <Text className="text-gray-500 text-lg text-center">
+            This workout is scheduled for the future.
           </Text>
-          <View className="flex-row space-x-2">
-            <View className={`w-3 h-3 rounded-full ${
-              workoutLog.is_complete ? 'bg-green-500' : 'bg-gray-300'
-            }`} />
-            <Text className={`text-sm font-medium ${
-              workoutLog.is_complete ? 'text-green-600' : 'text-gray-500'
-            }`}>
-              {workoutLog.is_complete ? 'Complete' : 'In Progress'}
-            </Text>
-          </View>
+          <Text className="text-gray-400 text-center mt-2">
+            Come back on {selectedDay.dayName} to log your workout!
+          </Text>
         </View>
-      </View>
+      );
+    }
 
-      {/* Workout Content */}
+    if (!currentLog) {
+      return (
+        <View className="flex-1 justify-center items-center p-6">
+          <Text className="text-gray-500 text-lg text-center mb-4">
+            No workout logged for {selectedDay.dayName}
+          </Text>
+          {selectedDay.isToday && (
+            <TouchableOpacity
+              className="bg-blue-500 px-6 py-3 rounded-lg"
+              onPress={() => {
+                // This would trigger creating a new workout log
+                // You might want to add this functionality
+              }}
+            >
+              <Text className="text-white font-medium">Start Today's Workout</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    return (
       <ScrollView className="flex-1 px-6 py-4">
-        {workoutLog.exercises.map((exercise, index) => 
+        {currentLog.exercises.map((exercise, index) => 
           renderExercise(exercise, index)
         )}
       </ScrollView>
+    );
+  };
 
-      {/* Action Buttons */}
+  const renderActionButtons = () => {
+    const currentLog = getCurrentWorkoutLog();
+    const selectedDay = weekDays[selectedDayIndex];
+    
+    if (!currentLog || selectedDay?.isFuture) {
+      return null;
+    }
+
+    return (
       <View className="bg-white border-t border-gray-200 px-6 py-4 space-y-3">
         <TouchableOpacity
           className="bg-gray-500 p-4 rounded-lg"
@@ -472,14 +615,84 @@ export default function WorkoutLogScreen() {
         <TouchableOpacity
           className="bg-green-500 p-4 rounded-lg"
           onPress={submitWorkout}
-          disabled={saving || workoutLog.is_complete}
+          disabled={saving || currentLog.is_complete}
         >
           <Text className="text-white text-center font-medium text-lg">
-            {workoutLog.is_complete ? 'Workout Completed' : 'Complete Workout'}
+            {currentLog.is_complete ? 'Workout Completed' : 'Complete Workout'}
           </Text>
         </TouchableOpacity>
       </View>
+    );
+  };
 
+  if (loading && weekDays.length === 0) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50">
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text className="mt-4 text-gray-600">Loading your weekly workouts...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-50 p-6">
+        <Text className="text-red-600 text-center mb-4 text-lg">{error}</Text>
+        <TouchableOpacity
+          onPress={initializeWeekView}
+          className="bg-blue-500 px-6 py-3 rounded-lg"
+        >
+          <Text className="text-white font-medium">Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const selectedDay = weekDays[selectedDayIndex];
+  const currentLog = getCurrentWorkoutLog();
+
+  return (
+    <View className="flex-1 bg-gray-50">
+      {/* Header */}
+      <View className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <Text className="text-2xl font-bold text-gray-900">
+          Weekly Workout Log
+        </Text>
+        {selectedDay && (
+          <View className="flex-row justify-between items-center mt-2">
+            <Text className="text-gray-600">
+              {selectedDay.dayName}, {new Date(selectedDay.date).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric'
+              })}
+              {selectedDay.isToday && ' (Today)'}
+            </Text>
+            {currentLog && (
+              <View className="flex-row items-center space-x-2">
+                <View className={`w-3 h-3 rounded-full ${
+                  currentLog.is_complete ? 'bg-green-500' : 'bg-yellow-500'
+                }`} />
+                <Text className={`text-sm font-medium ${
+                  currentLog.is_complete ? 'text-green-600' : 'text-yellow-600'
+                }`}>
+                  {currentLog.is_complete ? 'Complete' : 'In Progress'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Week Navigation */}
+      {renderWeekNavigation()}
+
+      {/* Workout Content */}
+      {renderWorkoutContent()}
+
+      {/* Action Buttons */}
+      {renderActionButtons()}
+
+      {/* Set Editor Modal */}
       {renderSetEditor()}
     </View>
   );

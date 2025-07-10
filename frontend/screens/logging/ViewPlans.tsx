@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { router } from 'expo-router';
-import api from '../api/api';
-import { useAuth } from '../context/AuthContext';
+import api from '../../api/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface PlannedExercise {
   name: string;
