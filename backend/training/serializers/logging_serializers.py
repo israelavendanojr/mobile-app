@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from training.models.logging_models import WorkoutLog, ExerciseLog, SetLog
+from training.models import WorkoutLog, WorkoutDayLog, ExerciseLog, SetLog, WorkoutDay
 
 class SetLogSerializer(serializers.ModelSerializer):
     class Meta:
@@ -7,15 +7,23 @@ class SetLogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ExerciseLogSerializer(serializers.ModelSerializer):
-    sets = SetLogSerializer(many=True)
+    sets = SetLogSerializer(many=True, required=False)
 
     class Meta:
         model = ExerciseLog
-        fields = ['id', 'name', 'target_sets', 'target_reps', 'sets']
+        fields = '__all__'
+
+class WorkoutDayLogSerializer(serializers.ModelSerializer):
+    exercises = ExerciseLogSerializer(many=True, required=False)
+    workout_day = serializers.StringRelatedField()  # or .SlugRelatedField if you want the name
+
+    class Meta:
+        model = WorkoutDayLog
+        fields = '__all__'
 
 class WorkoutLogSerializer(serializers.ModelSerializer):
-    exercises = ExerciseLogSerializer(many=True)
+    days = WorkoutDayLogSerializer(many=True, required=False)
 
     class Meta:
         model = WorkoutLog
-        fields = ['id', 'user', 'date', 'is_complete', 'exercises']
+        fields = '__all__'

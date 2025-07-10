@@ -3,64 +3,65 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import date
-
-from training.models.logging_models import WorkoutLog
+from training.models import WorkoutLog, WorkoutDayLog, ExerciseLog, SetLog, WorkoutDay, WorkoutPlan
 from training.serializers.logging_serializers import WorkoutLogSerializer
-
-from training.models import WorkoutPlan, WorkoutDay, PlannedExercise, WorkoutLog, ExerciseLog
-from datetime import date, timedelta
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_today_log(request):
-    today = date.today()
+def get_week_log(request):
     user = request.user
+    today = date.today()
+    start_of_week = today - timedelta(days=today.weekday())  # Monday as start
 
-    log, created = WorkoutLog.objects.get_or_create(user=user, date=today)
+    log, created = WorkoutLog.objects.get_or_create(user=user, start_date=start_of_week)
 
     if created:
-        # 1. Get user plan
+        # Get latest saved plan
         plan = WorkoutPlan.objects.filter(user=user).last()
         if not plan:
             return Response({"error": "No saved plan found."}, status=404)
 
-        workout_days = plan.days.all().order_by("order")  # e.g., Push, Pull, Legs
-        total_days = workout_days.count()
+        workout_days = plan.days.all().order_by("order")
 
-        # 2. Get last workout log (before today)
-        last_log = WorkoutLog.objects.filter(user=user, date__lt=today).order_by("-date").first()
-
-        if last_log and last_log.workout_day:  # Optional: if you store what day was used
-            last_day_index = workout_days.filter(day_name=last_log.workout_day.day_name).first().order
-            next_day_index = (last_day_index + 1) % total_days
-        else:
-            next_day_index = 0  # Start from first day in plan
-
-        # 3. Get today's WorkoutDay
-        today_day = workout_days[next_day_index]
-
-        # 4. Create ExerciseLogs for today
-        for planned_ex in today_day.exercises.all():
-            ExerciseLog.objects.create(
-                workout=log,
-                name=planned_ex.name,
-                target_sets=planned_ex.sets,
-                target_reps=planned_ex.start_reps,
+        for idx, day in enumerate(workout_days):
+            day_log = WorkoutDayLog.objects.create(
+                workout_log=log,
+                workout_day=day,
+                order=idx
             )
 
-        # Optional: link WorkoutDay to WorkoutLog
-        log.workout_day = today_day
-        log.save()
+            for planned_ex in day.exercises.all():
+                ExerciseLog.objects.create(
+                    workout_day_log=day_log,
+                    name=planned_ex.name,
+                    target_sets=planned_ex.sets,
+                    target_reps=planned_ex.start_reps
+                )
 
     serializer = WorkoutLogSerializer(log)
     return Response(serializer.data)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def submit_week_log(request):
+    user = request.user
+    try:
+        log = WorkoutLog.objects.get(id=request.data.get('id'), user=user)
+    except WorkoutLog.DoesNotExist:
+        return Response({"error": "Workout log not found"}, status=404)
+
+    log.is_complete = True
+    log.save()
+    return Response({"message": "Workout week submitted!"})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def submit_log(request):
-    serializer = WorkoutLogSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save(user=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def submit_day_log(request, day_log_id):
+    try:
+        day_log = WorkoutDayLog.objects.get(id=day_log_id, workout_log__user=request.user)
+    except WorkoutDayLog.DoesNotExist:
+        return Response({"error": "Workout day log not found"}, status=404)
+
+    day_log.is_complete = True
+    day_log.save()
+    return Response({"message": f"{day_log.workout_day.day_name} marked complete."})

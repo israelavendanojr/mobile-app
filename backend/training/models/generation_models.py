@@ -5,7 +5,8 @@ from training.models.generic_models import Muscle, Equipment, ExerciseType
 # Generation models
 class ExercisePattern(models.Model):
     name = models.CharField(max_length=100)  # e.g., "Vertical Pull"
-    target_muscles = models.ManyToManyField(Muscle)
+    primary_muscles = models.ManyToManyField(Muscle, related_name="primary_for")
+    secondary_muscles = models.ManyToManyField(Muscle, related_name="secondary_for")
     
     def __str__(self):
         return self.name

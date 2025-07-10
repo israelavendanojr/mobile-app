@@ -68,21 +68,34 @@ export default function WorkoutLogScreen() {
     initializeWeekView();
   }, []);
 
+  const getCurrentWorkoutLog = (): WorkoutLog | null => {
+    return weekDays[selectedDayIndex]?.workoutLog || null;
+  };
+
+  const updateCurrentWorkoutLog = (updatedLog: WorkoutLog) => {
+    const updatedDays = [...weekDays];
+    updatedDays[selectedDayIndex] = {
+      ...updatedDays[selectedDayIndex],
+      workoutLog: updatedLog
+    };
+    setWeekDays(updatedDays);
+  };
+
   const initializeWeekView = () => {
     const today = new Date();
     const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
-    
+    currentWeekStart.setDate(today.getDate() - today.getDay());
+
     const days: WeekDay[] = [];
     let todayIndex = 0;
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(currentWeekStart);
       date.setDate(currentWeekStart.getDate() + i);
-      
+
       const dateString = date.toISOString().split('T')[0];
       const isToday = dateString === today.toISOString().split('T')[0];
-      
+
       if (isToday) {
         todayIndex = i;
       }
@@ -99,85 +112,58 @@ export default function WorkoutLogScreen() {
 
     setWeekDays(days);
     setSelectedDayIndex(todayIndex);
-    loadWeekLogs(days);
+    loadWeekLog();
   };
 
-  const loadWeekLogs = async (days: WeekDay[]) => {
+  const loadWeekLog = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      // Load logs for each day of the week
-      const promises = days.map(async (day) => {
-        try {
-          const response = await api.get(`/api/workout/log/?date=${day.date}`);
-          return { ...day, workoutLog: response.data };
-        } catch (err: any) {
-          // If no log exists for this day, that's okay
-          if (err.response?.status === 404) {
-            return day;
-          }
-          throw err;
-        }
+      const response = await api.get('/api/workout/log/week/');
+      const log = response.data;
+
+      const today = new Date();
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+
+      const days: WeekDay[] = [...Array(7)].map((_, i) => {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        const isToday = dateStr === today.toISOString().split('T')[0];
+
+        const matchedLog = log.days.find((d: any) => d.order === i);
+
+        return {
+          date: dateStr,
+          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          isToday,
+          isPast: date < today && !isToday,
+          isFuture: date > today,
+          workoutLog: matchedLog
+            ? {
+                ...matchedLog,
+                is_complete: matchedLog.is_complete,
+                workout_day: matchedLog.workout_day,
+                exercises: matchedLog.exercises,
+                id: matchedLog.id
+              }
+            : undefined
+        };
       });
 
-      const updatedDays = await Promise.all(promises);
-      setWeekDays(updatedDays);
-    } catch (err: any) {
-      console.error('Error loading week logs:', err);
-      setError('Failed to load workout logs for the week');
+      setWeekDays(days);
+      setSelectedDayIndex(days.findIndex(d => d.isToday));
+    } catch (err) {
+      console.error('Failed to load week log:', err);
+      setError('Could not load weekly workout log.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadDayLog = async (date: string) => {
-    try {
-      const response = await api.get(`/api/workout/log/?date=${date}`);
-      return response.data;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        return null;
-      }
-      throw err;
-    }
-  };
-
-  const getCurrentWorkoutLog = (): WorkoutLog | null => {
-    return weekDays[selectedDayIndex]?.workoutLog || null;
-  };
-
-  const updateCurrentWorkoutLog = (updatedLog: WorkoutLog) => {
-    const updatedDays = [...weekDays];
-    updatedDays[selectedDayIndex] = {
-      ...updatedDays[selectedDayIndex],
-      workoutLog: updatedLog
-    };
-    setWeekDays(updatedDays);
-  };
-
   const selectDay = async (dayIndex: number) => {
     if (dayIndex === selectedDayIndex) return;
-
     setSelectedDayIndex(dayIndex);
-    const day = weekDays[dayIndex];
-    
-    // If we don't have a log for this day and it's not in the future, try to load it
-    if (!day.workoutLog && !day.isFuture) {
-      try {
-        setLoading(true);
-        const log = await loadDayLog(day.date);
-        if (log) {
-          const updatedDays = [...weekDays];
-          updatedDays[dayIndex] = { ...day, workoutLog: log };
-          setWeekDays(updatedDays);
-        }
-      } catch (err: any) {
-        console.error('Error loading day log:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
   };
 
   const addSet = (exerciseIndex: number) => {
@@ -275,7 +261,7 @@ export default function WorkoutLogScreen() {
                 is_complete: true
               };
 
-              await api.post('/api/workout/log/submit/', submitData);
+              await api.post(`/api/workout/log/day/${currentLog.id}/submit/`, submitData);
               
               // Update the local state
               updateCurrentWorkoutLog(submitData);
