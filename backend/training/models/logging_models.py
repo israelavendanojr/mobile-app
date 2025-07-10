@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 class WorkoutLog(models.Model):
+    workout_day = models.ForeignKey("WorkoutDay", on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField(auto_now_add=True)
     is_complete = models.BooleanField(default=False)

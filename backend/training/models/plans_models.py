@@ -9,6 +9,9 @@ class WorkoutPlan(models.Model):
     days_per_week = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
+
 class WorkoutDay(models.Model):
     plan = models.ForeignKey(WorkoutPlan, on_delete=models.CASCADE, related_name="days")
     day_name = models.CharField(max_length=100)
