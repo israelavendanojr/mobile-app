@@ -16,6 +16,7 @@ class ExerciseMovement(models.Model):
     name = models.CharField(max_length=100) # e.g., "Pull-up"
     equipment = models.ManyToManyField(Equipment)
     type = models.CharField(max_length=100, choices=ExerciseType.choices, default=ExerciseType.COMPOUND)
+    form_image = models.ImageField(upload_to='exercise_form_images', blank=True, null=True)
     
     def __str__(self):
         return self.name
@@ -27,6 +28,7 @@ class WorkoutDayTemplate(models.Model):
         through='DayPatternThrough',
         related_name='day_templates'
     )
+    description = models.TextField(blank=True, null=True)
     
     def __str__(self):
         return self.name

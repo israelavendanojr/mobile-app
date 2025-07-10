@@ -11,7 +11,7 @@ class WorkoutDaySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WorkoutDay
-        fields = ("day_name", "order", "exercises")
+        fields = ("day_name", "order", "exercises", "description", "form_image")
 
 class WorkoutPlanSerializer(serializers.ModelSerializer):
     days = WorkoutDaySerializer(many=True)

@@ -308,9 +308,10 @@ export default function WorkoutLogScreen() {
 
   const renderWeekNavigation = () => {
     return (
-      <View className="bg-white border-b border-gray-200 px-4 py-3">
+      <View className="bg-white px-4 py-3 border-b border-gray-100">
+        <Text className="text-lg font-semibold text-gray-800 mb-3">Week 3 (Sun. July 5)</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row space-x-2">
+          <View className="flex-row space-x-3">
             {weekDays.map((day, index) => {
               const isSelected = index === selectedDayIndex;
               const hasWorkout = !!day.workoutLog;
@@ -319,16 +320,16 @@ export default function WorkoutLogScreen() {
               return (
                 <TouchableOpacity
                   key={day.date}
-                  className={`px-4 py-3 rounded-lg min-w-20 ${
+                  className={`w-14 h-14 rounded-xl items-center justify-center ${
                     isSelected 
                       ? 'bg-blue-500' 
                       : hasWorkout 
-                        ? 'bg-green-50 border border-green-200' 
+                        ? 'bg-green-50 border-2 border-green-200' 
                         : 'bg-gray-50 border border-gray-200'
                   }`}
                   onPress={() => selectDay(index)}
                 >
-                  <Text className={`text-center font-medium ${
+                  <Text className={`text-xs font-medium ${
                     isSelected 
                       ? 'text-white' 
                       : hasWorkout 
@@ -337,20 +338,19 @@ export default function WorkoutLogScreen() {
                   }`}>
                     {day.dayName}
                   </Text>
-                  <Text className={`text-center text-sm ${
+                  <Text className={`text-lg font-bold ${
                     isSelected 
-                      ? 'text-blue-100' 
-                      : 'text-gray-500'
+                      ? 'text-white' 
+                      : hasWorkout 
+                        ? 'text-green-700' 
+                        : 'text-gray-800'
                   }`}>
                     {new Date(day.date).getDate()}
                   </Text>
-                  {day.isToday && (
-                    <View className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full" />
-                  )}
-                  {hasWorkout && (
-                    <View className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${
-                      isComplete ? 'bg-green-500' : 'bg-yellow-500'
-                    }`} />
+                  {isComplete && (
+                    <View className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full items-center justify-center">
+                      <Text className="text-white text-xs">✓</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -456,31 +456,35 @@ export default function WorkoutLogScreen() {
 
   const renderSet = (set: SetLog, setIndex: number, exerciseIndex: number) => {
     return (
-      <TouchableOpacity
-        key={setIndex}
-        className="flex-row items-center justify-between bg-white p-3 rounded-lg mb-2 border border-gray-200"
-        onPress={() => openSetEditor(exerciseIndex, setIndex)}
-      >
-        <View className="flex-row items-center flex-1">
-          <Text className="text-lg font-semibold text-gray-800 w-12">
-            {set.set_number}
-          </Text>
-          <Text className="text-lg text-gray-700 flex-1 text-center">
-            {set.weight}lbs × {set.reps} reps
-          </Text>
-          {set.rpe && (
-            <Text className="text-sm text-gray-500 ml-2">
-              RPE: {set.rpe}
-            </Text>
-          )}
+      <View key={setIndex} className="flex-row items-center bg-white rounded-lg p-3 mb-2 border border-gray-100">
+        <View className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center mr-3">
+          <Text className="text-sm font-semibold text-gray-600">{set.set_number}</Text>
         </View>
+        
         <TouchableOpacity
-          className="ml-4 p-2"
+          className="flex-1 flex-row items-center justify-between"
+          onPress={() => openSetEditor(exerciseIndex, setIndex)}
+        >
+          <View className="flex-1">
+            <Text className="text-base font-medium text-gray-800">
+              {set.weight}lbs × {set.reps} reps
+            </Text>
+            {set.rpe && (
+              <Text className="text-sm text-gray-500 mt-1">
+                RPE: {set.rpe}/10
+              </Text>
+            )}
+          </View>
+          <Text className="text-gray-400">›</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          className="ml-3 w-8 h-8 items-center justify-center"
           onPress={() => removeSet(exerciseIndex, setIndex)}
         >
-          <Text className="text-red-500 font-bold">×</Text>
+          <Text className="text-red-500 text-lg">×</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -490,40 +494,39 @@ export default function WorkoutLogScreen() {
     
     return (
       <View key={exerciseIndex} className="mb-6">
-        <View className="bg-gray-50 p-4 rounded-lg mb-3">
-          <Text className="text-xl font-bold text-gray-800 mb-2">
-            {exercise.name}
-          </Text>
-          <View className="flex-row justify-between items-center">
-            <Text className="text-gray-600">
-              Target: {targetSets} sets × {exercise.target_reps} reps
+        <View className="bg-white rounded-xl p-4 mb-3 border border-gray-100">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-lg font-bold text-gray-800 flex-1">
+              {exercise.name}
             </Text>
-            <Text className={`font-medium ${
-              completedSets >= targetSets ? 'text-green-600' : 'text-orange-600'
-            }`}>
-              {completedSets}/{targetSets} sets
-            </Text>
-          </View>
-        </View>
-
-        <View className="mb-3">
-          <View className="flex-row justify-between items-center mb-2">
-            <Text className="text-lg font-semibold text-gray-700">Sets</Text>
-            <Text className="text-sm text-gray-500">Set | Weight × Reps</Text>
+            <View className="flex-row items-center space-x-2">
+              <Text className={`text-sm font-medium px-2 py-1 rounded-full ${
+                completedSets >= targetSets 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-orange-100 text-orange-700'
+              }`}>
+                {completedSets}/{targetSets}
+              </Text>
+            </View>
           </View>
           
+          <Text className="text-sm text-gray-600">
+            Target: {targetSets} sets × {exercise.target_reps} reps
+          </Text>
+        </View>
+
+        <View className="space-y-2">
           {exercise.sets.map((set, setIndex) => 
             renderSet(set, setIndex, exerciseIndex)
           )}
         </View>
 
         <TouchableOpacity
-          className="bg-blue-500 p-3 rounded-lg"
+          className="mt-3 bg-blue-500 p-4 rounded-xl flex-row items-center justify-center"
           onPress={() => addSet(exerciseIndex)}
         >
-          <Text className="text-white text-center font-medium">
-            + Add Set
-          </Text>
+          <Text className="text-white font-medium text-base mr-2">+</Text>
+          <Text className="text-white font-medium text-base">Add Set</Text>
         </TouchableOpacity>
       </View>
     );
@@ -570,11 +573,35 @@ export default function WorkoutLogScreen() {
     }
 
     return (
-      <ScrollView className="flex-1 px-6 py-4">
-        {currentLog.exercises.map((exercise, index) => 
-          renderExercise(exercise, index)
-        )}
-      </ScrollView>
+      <View className="flex-1">
+        {/* Workout Day Header */}
+        <View className="bg-white mx-4 mt-4 p-4 rounded-xl border border-gray-100">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xl font-bold text-gray-800">
+              {currentLog.workout_day?.day_name || 'Workout'}
+            </Text>
+            <View className={`px-3 py-1 rounded-full ${
+              currentLog.is_complete 
+                ? 'bg-green-100' 
+                : 'bg-blue-100'
+            }`}>
+              <Text className={`text-sm font-medium ${
+                currentLog.is_complete 
+                  ? 'text-green-700' 
+                  : 'text-blue-700'
+              }`}>
+                {currentLog.is_complete ? 'Completed' : 'In Progress'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView className="flex-1 px-4 py-4">
+          {currentLog.exercises.map((exercise, index) => 
+            renderExercise(exercise, index)
+          )}
+        </ScrollView>
+      </View>
     );
   };
 
@@ -587,26 +614,36 @@ export default function WorkoutLogScreen() {
     }
 
     return (
-      <View className="bg-white border-t border-gray-200 px-6 py-4 space-y-3">
-        <TouchableOpacity
-          className="bg-gray-500 p-4 rounded-lg"
-          onPress={saveProgress}
-          disabled={saving}
-        >
-          <Text className="text-white text-center font-medium text-lg">
-            {saving ? 'Saving...' : 'Save Progress'}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          className="bg-green-500 p-4 rounded-lg"
-          onPress={submitWorkout}
-          disabled={saving || currentLog.is_complete}
-        >
-          <Text className="text-white text-center font-medium text-lg">
-            {currentLog.is_complete ? 'Workout Completed' : 'Complete Workout'}
-          </Text>
-        </TouchableOpacity>
+      <View className="bg-white border-t border-gray-100 px-4 py-4">
+        <View className="flex-row space-x-3">
+          <TouchableOpacity
+            className="flex-1 bg-gray-100 p-4 rounded-xl"
+            onPress={saveProgress}
+            disabled={saving}
+          >
+            <Text className="text-gray-700 text-center font-medium">
+              {saving ? 'Saving...' : 'Save Progress'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            className={`flex-1 p-4 rounded-xl ${
+              currentLog.is_complete 
+                ? 'bg-green-100' 
+                : 'bg-green-500'
+            }`}
+            onPress={submitWorkout}
+            disabled={saving || currentLog.is_complete}
+          >
+            <Text className={`text-center font-medium ${
+              currentLog.is_complete 
+                ? 'text-green-700' 
+                : 'text-white'
+            }`}>
+              {currentLog.is_complete ? 'Completed ✓' : 'Complete Workout'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -634,41 +671,8 @@ export default function WorkoutLogScreen() {
     );
   }
 
-  const selectedDay = weekDays[selectedDayIndex];
-  const currentLog = getCurrentWorkoutLog();
-
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <Text className="text-2xl font-bold text-gray-900">
-          Weekly Workout Log
-        </Text>
-        {selectedDay && (
-          <View className="flex-row justify-between items-center mt-2">
-            <Text className="text-gray-600">
-              {selectedDay.dayName}, {new Date(selectedDay.date).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric'
-              })}
-              {selectedDay.isToday && ' (Today)'}
-            </Text>
-            {currentLog && (
-              <View className="flex-row items-center space-x-2">
-                <View className={`w-3 h-3 rounded-full ${
-                  currentLog.is_complete ? 'bg-green-500' : 'bg-yellow-500'
-                }`} />
-                <Text className={`text-sm font-medium ${
-                  currentLog.is_complete ? 'text-green-600' : 'text-yellow-600'
-                }`}>
-                  {currentLog.is_complete ? 'Complete' : 'In Progress'}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-
       {/* Week Navigation */}
       {renderWeekNavigation()}
 
