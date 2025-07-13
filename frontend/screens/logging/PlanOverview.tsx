@@ -1,9 +1,32 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Target } from 'lucide-react-native';
 
-const PlanOverview = ({ plans, onSelectPlan }) => {
-  const getDifficultyColor = (difficulty) => {
+// Define TypeScript interfaces
+interface Plan {
+  id: string | number;
+  name: string;
+  description: string;
+  difficulty: string;
+  duration: string;
+  daysPerWeek: number;
+  goals: string[];
+}
+
+interface PlanOverviewProps {
+  plans?: Plan[];
+  onSelectPlan: (plan: Plan) => void;
+  loading?: boolean;
+  error?: string;
+}
+
+const PlanOverview: React.FC<PlanOverviewProps> = ({ 
+  plans = [], 
+  onSelectPlan, 
+  loading = false, 
+  error 
+}) => {
+  const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case 'beginner':
         return 'bg-green-100 text-green-800';
@@ -15,6 +38,63 @@ const PlanOverview = ({ plans, onSelectPlan }) => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text className="mt-2 text-gray-600">Loading workout plans...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white p-6">
+        <Text className="text-xl font-bold text-red-600 mb-4">
+          Error Loading Plans
+        </Text>
+        <Text className="text-gray-600 text-center mb-4">
+          {error}
+        </Text>
+        <TouchableOpacity 
+          className="bg-blue-600 py-2 px-4 rounded-lg"
+          onPress={() => {
+            // Add retry logic here if needed
+            console.log('Retry loading plans');
+          }}
+        >
+          <Text className="text-white font-medium">Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Empty state
+  if (!plans || plans.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white p-6">
+        <Target className="text-gray-400" size={48} />
+        <Text className="text-xl font-bold text-gray-600 mt-4 mb-2">
+          No Plans Available
+        </Text>
+        <Text className="text-gray-500 text-center">
+          No workout plans found. Create your first plan to get started!
+        </Text>
+        <TouchableOpacity 
+          className="bg-blue-600 py-2 px-4 rounded-lg mt-4"
+          onPress={() => {
+            // Add navigation to create plan if needed
+            console.log('Navigate to create plan');
+          }}
+        >
+          <Text className="text-white font-medium">Create Plan</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView className="space-y-6 p-4">
@@ -50,7 +130,7 @@ const PlanOverview = ({ plans, onSelectPlan }) => {
             <View className="flex-row justify-between text-sm items-start">
               <Text className="text-gray-600">Goals:</Text>
               <View className="flex-row flex-wrap gap-1 max-w-[60%] justify-end">
-                {plan.goals.map((goal, index) => (
+                {(plan.goals || []).map((goal, index) => (
                   <View
                     key={index}
                     className="bg-blue-100 px-2 py-1 rounded-full"
