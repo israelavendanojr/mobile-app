@@ -2,4 +2,4 @@
 frontend/.env
 backend/.env
 venv/
-backend/logger_engine/data/
+backend/logger_engine/data/pose_video
