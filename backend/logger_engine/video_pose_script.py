@@ -10,8 +10,8 @@ video_path = "./logger_engine/data/pose_video/sldl_israel.MOV"
 # Extract base name without extension
 video_filename = os.path.basename(video_path)                  # your_video.mp4
 video_name = os.path.splitext(video_filename)[0]              # your_video
-output_json_path = f"./logger_engine/data/pose_json/{video_name}_raw_pose_data.json"
-output_npy_path = f"./logger_engine/data/pose_np/{video_name}_pose_data.npy"
+output_json_path = f"./logger_engine/data/pose_json/{video_name}_json.json"
+output_npy_path = f"./logger_engine/data/pose_np/{video_name}_npy.npy"
 
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
