@@ -7,15 +7,15 @@ interface DayOverviewCardProps {
 }
 
 const DayOverviewCard: React.FC<DayOverviewCardProps> = ({ workoutLog }) => {
-  const totalSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-  const targetSets = workoutLog.exercises.reduce((sum, ex) => sum + ex.target_sets, 0);
-  const completionPercentage = targetSets > 0
-    ? Math.round((totalSets / targetSets) * 100)
+  const completedExercises = workoutLog.exercises.filter((ex) => ex.sets.length > 0).length;
+  const totalExercises = workoutLog.exercises.length;
+  const completionPercentage = totalExercises > 0
+    ? Math.round((completedExercises / totalExercises) * 100)
     : 0;
 
   return (
     <View className="bg-white mx-4 mt-4 rounded-2xl shadow-sm border border-gray-100">
-      {/* Header */}
+      {/* Header */} 
       <View className="px-6 py-4 border-b border-gray-100">
         <View className="flex-row items-center justify-between">
           <View>
@@ -23,7 +23,7 @@ const DayOverviewCard: React.FC<DayOverviewCardProps> = ({ workoutLog }) => {
               {workoutLog.workout_day?.day_name || 'Workout'}
             </Text>
             <Text className="text-sm text-gray-500 mt-1">
-              {workoutLog.exercises.length} exercises
+              {totalExercises} exercises
             </Text>
           </View>
           <View className="items-end">
@@ -59,7 +59,7 @@ const DayOverviewCard: React.FC<DayOverviewCardProps> = ({ workoutLog }) => {
           />
         </View>
         <Text className="text-xs text-gray-500 mt-1">
-          {totalSets} of {targetSets} sets completed
+          {completedExercises} of {totalExercises} exercises completed
         </Text>
       </View>
     </View>

@@ -110,27 +110,49 @@ class Command(BaseCommand):
             movement.equipment.set([Equipment.objects.get(name=equipment_name)])
 
     def seed_day_templates(self):
-        day_templates = ["Push", "Pull", "Legs", "Upper", "Lower", "Full Body"]
+        day_templates = ["Push", "Pull", "Legs", "Upper", "Lower", "Rest"]
         WorkoutDayTemplate.objects.bulk_create([WorkoutDayTemplate(name=name) for name in day_templates])
 
     def seed_splits(self):
         # Example: Push Pull Legs split
-        split = WorkoutSplitTemplate.objects.create(name="Push Pull Legs", days_per_week=3)
+        push_pull_legs = WorkoutSplitTemplate.objects.create(name="Push Pull Legs", days_per_week=6)
         push = WorkoutDayTemplate.objects.get(name="Push")
         pull = WorkoutDayTemplate.objects.get(name="Pull")
         legs = WorkoutDayTemplate.objects.get(name="Legs")
-        SplitDayThrough.objects.bulk_create([
-            SplitDayThrough(split=split, day_template=push, day_index=0),
-            SplitDayThrough(split=split, day_template=pull, day_index=1),
-            SplitDayThrough(split=split, day_template=legs, day_index=2),
-        ])
 
+        rest = WorkoutDayTemplate.objects.get(name="Rest")
+
+        upper_lower = WorkoutSplitTemplate.objects.create(name="Upper Lower", days_per_week=4)
+        upper = WorkoutDayTemplate.objects.get(name="Upper")
+        lower = WorkoutDayTemplate.objects.get(name="Lower")
+
+        SplitDayThrough.objects.bulk_create([
+            SplitDayThrough(split=push_pull_legs, day_template=push, day_index=1),
+            SplitDayThrough(split=push_pull_legs, day_template=pull, day_index=2),
+            SplitDayThrough(split=push_pull_legs, day_template=legs, day_index=3),
+            SplitDayThrough(split=push_pull_legs, day_template=push, day_index=4),
+            SplitDayThrough(split=push_pull_legs, day_template=pull, day_index=5),
+            SplitDayThrough(split=push_pull_legs, day_template=legs, day_index=6),
+            SplitDayThrough(split=push_pull_legs, day_template=rest, day_index=7),
+        ])
+        SplitDayThrough.objects.bulk_create([
+            SplitDayThrough(split=upper_lower, day_template=upper, day_index=1),
+            SplitDayThrough(split=upper_lower, day_template=lower, day_index=2),
+            SplitDayThrough(split=upper_lower, day_template=rest, day_index=3),
+            SplitDayThrough(split=upper_lower, day_template=upper, day_index=4),
+            SplitDayThrough(split=upper_lower, day_template=lower, day_index=5),
+            SplitDayThrough(split=upper_lower, day_template=rest, day_index=6),
+            SplitDayThrough(split=upper_lower, day_template=rest, day_index=7),
+        ])
 
     def seed_day_pattern_through(self):
         pattern_map = {
             "Push": ["Horizontal Incline Push", "Horizontal Push", "Vertical Push", "Side Delt Isolation", "Tricep Isolation"],
             "Pull": ["Vertical Pull", "Horizontal Pull", "Lat Isolation", "Rear Delt Isolation", "Bicep Isolation"],
-            "Legs": ["Squat", "Hinge", "Quad Isolation", "Hamstring Isolation", "Calf Isolation"]
+            "Legs": ["Squat", "Hinge", "Quad Isolation", "Hamstring Isolation", "Calf Isolation"],  
+            "Rest": [],
+            "Upper": ["Vertical Push", "Horizontal Push", "Horizontal Pull", "Horizontal Incline Push", "Lat Isolation", "Bicep Isolation", "Tricep Isolation"],
+            "Lower": ["Squat", "Hinge", "Quad Isolation", "Hamstring Isolation", "Calf Isolation"], 
         }
 
         for day_name, patterns in pattern_map.items():
