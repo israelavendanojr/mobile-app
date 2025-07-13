@@ -1,50 +1,44 @@
-export const workoutWeek = [
+import { WorkoutData } from '../types/workout';
+
+// Mock workout data
+export const workoutData: WorkoutData = {
+  currentWeek: [
     {
       id: 1,
       dayName: 'Monday',
-      name: 'Upper Day',
+      name: 'Push Day',
+      description: 'Chest, Shoulders, Triceps',
       type: 'workout',
-      description: 'Hit entire upper body with compound movements',
       completed: false,
       exercises: [
         {
           id: 1,
-          name: 'Dumbbell Incline Bench Press',
-          targetMuscles: ['Chest', 'Shoulders', 'Triceps'],
+          name: 'Bench Press',
+          targetMuscles: ['Chest', 'Triceps'],
           sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
+            { id: 1, reps: 8, weight: 185, completed: false },
+            { id: 2, reps: 6, weight: 195, completed: false },
+            { id: 3, reps: 4, weight: 205, completed: false }
           ]
         },
         {
           id: 2,
-          name: 'Pull-ups',
-          targetMuscles: ['Lats', 'Rhomboids', 'Biceps'],
+          name: 'Overhead Press',
+          targetMuscles: ['Shoulders', 'Triceps'],
           sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
+            { id: 1, reps: 8, weight: 95, completed: false },
+            { id: 2, reps: 6, weight: 105, completed: false },
+            { id: 3, reps: 4, weight: 115, completed: false }
           ]
         },
         {
           id: 3,
-          name: 'Overhead Press',
-          targetMuscles: ['Shoulders', 'Triceps', 'Core'],
+          name: 'Incline Dumbbell Press',
+          targetMuscles: ['Upper Chest', 'Shoulders'],
           sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        },
-        {
-          id: 4,
-          name: 'Barbell Rows',
-          targetMuscles: ['Lats', 'Rhomboids', 'Rear Delts'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
+            { id: 1, reps: 10, weight: 70, completed: false },
+            { id: 2, reps: 8, weight: 75, completed: false },
+            { id: 3, reps: 6, weight: 80, completed: false }
           ]
         }
       ]
@@ -52,39 +46,29 @@ export const workoutWeek = [
     {
       id: 2,
       dayName: 'Tuesday',
-      name: 'Lower Day',
+      name: 'Pull Day',
+      description: 'Back, Biceps, Rear Delts',
       type: 'workout',
-      description: 'Build powerful legs and glutes',
       completed: false,
       exercises: [
         {
+          id: 4,
+          name: 'Deadlift',
+          targetMuscles: ['Back', 'Hamstrings'],
+          sets: [
+            { id: 1, reps: 5, weight: 225, completed: false },
+            { id: 2, reps: 3, weight: 245, completed: false },
+            { id: 3, reps: 1, weight: 265, completed: false }
+          ]
+        },
+        {
           id: 5,
-          name: 'Squats',
-          targetMuscles: ['Quads', 'Glutes', 'Core'],
+          name: 'Pull-ups',
+          targetMuscles: ['Lats', 'Biceps'],
           sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        },
-        {
-          id: 6,
-          name: 'Romanian Deadlifts',
-          targetMuscles: ['Hamstrings', 'Glutes', 'Lower Back'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        },
-        {
-          id: 7,
-          name: 'Bulgarian Split Squats',
-          targetMuscles: ['Quads', 'Glutes', 'Calves'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
+            { id: 1, reps: 8, weight: 0, completed: false },
+            { id: 2, reps: 6, weight: 0, completed: false },
+            { id: 3, reps: 4, weight: 0, completed: false }
           ]
         }
       ]
@@ -93,37 +77,26 @@ export const workoutWeek = [
       id: 3,
       dayName: 'Wednesday',
       name: 'Rest Day',
+      description: 'Active Recovery',
       type: 'rest',
-      description: 'Recovery and mobility work',
-      completed: true,
-      exercises: []
+      completed: false
     },
     {
       id: 4,
       dayName: 'Thursday',
-      name: 'Upper Day',
+      name: 'Legs',
+      description: 'Quads, Glutes, Hamstrings',
       type: 'workout',
-      description: 'Focus on strength and muscle building',
-      completed: false,
+      completed: true,
       exercises: [
         {
-          id: 8,
-          name: 'Bench Press',
-          targetMuscles: ['Chest', 'Shoulders', 'Triceps'],
+          id: 6,
+          name: 'Squat',
+          targetMuscles: ['Quads', 'Glutes'],
           sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        },
-        {
-          id: 9,
-          name: 'Lat Pulldowns',
-          targetMuscles: ['Lats', 'Rhomboids', 'Biceps'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
+            { id: 1, reps: 8, weight: 185, completed: true },
+            { id: 2, reps: 6, weight: 205, completed: true },
+            { id: 3, reps: 4, weight: 225, completed: true }
           ]
         }
       ]
@@ -131,49 +104,60 @@ export const workoutWeek = [
     {
       id: 5,
       dayName: 'Friday',
-      name: 'Lower Day',
+      name: 'Push Day',
+      description: 'Chest, Shoulders, Triceps',
       type: 'workout',
-      description: 'Power and explosive movements',
       completed: false,
-      exercises: [
-        {
-          id: 10,
-          name: 'Deadlifts',
-          targetMuscles: ['Hamstrings', 'Glutes', 'Traps'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        },
-        {
-          id: 11,
-          name: 'Leg Press',
-          targetMuscles: ['Quads', 'Glutes'],
-          sets: [
-            { id: 1, reps: 0, weight: 0, completed: false },
-            { id: 2, reps: 0, weight: 0, completed: false },
-            { id: 3, reps: 0, weight: 0, completed: false }
-          ]
-        }
-      ]
+      exercises: []
     },
     {
       id: 6,
       dayName: 'Saturday',
-      name: 'Rest Day',
-      type: 'rest',
-      description: 'Active recovery and stretching',
-      completed: true,
+      name: 'Pull Day',
+      description: 'Back, Biceps, Rear Delts',
+      type: 'workout',
+      completed: false,
       exercises: []
     },
     {
       id: 7,
       dayName: 'Sunday',
       name: 'Rest Day',
+      description: 'Complete Rest',
       type: 'rest',
-      description: 'Complete rest and preparation',
-      completed: true,
-      exercises: []
+      completed: false
     }
-  ];
+  ],
+  plans: [
+    {
+      id: 1,
+      name: 'Push Pull Legs',
+      description: 'Classic 6-day split focusing on compound movements',
+      duration: '12 weeks',
+      difficulty: 'Intermediate',
+      goals: ['Strength', 'Muscle Growth'],
+      daysPerWeek: 6
+    },
+    {
+      id: 2,
+      name: 'Upper Lower Split',
+      description: '4-day split alternating upper and lower body',
+      duration: '8 weeks',
+      difficulty: 'Beginner',
+      goals: ['Strength', 'Conditioning'],
+      daysPerWeek: 4
+    },
+    {
+      id: 3,
+      name: 'Full Body',
+      description: 'Total body workout 3x per week',
+      duration: '6 weeks',
+      difficulty: 'Beginner',
+      goals: ['General Fitness', 'Fat Loss'],
+      daysPerWeek: 3
+    }
+  ],
+  currentWeekNumber: 1
+};
+
+export default workoutData;

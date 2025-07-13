@@ -1,156 +1,163 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Info, Plus, Minus } from 'lucide-react';
-import ExerciseForm from './ExerciseForm';
+import { View, Text, TextInput, Pressable } from 'react-native';
+import { Plus, Minus, Info } from 'lucide-react-native';
+import { Exercise } from '../../types/workout';
 
-const ExerciseCard = ({ exercise, onUpdate }) => {
+interface ExerciseCardProps {
+  exercise: Exercise;
+  onUpdate: (updatedExercise: Exercise) => void;
+}
+
+const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdate }) => {
   const [showForm, setShowForm] = useState(false);
-  const [sets, setSets] = useState(exercise.sets || [
-    { id: 1, reps: 0, weight: 0, completed: false },
-    { id: 2, reps: 0, weight: 0, completed: false },
-    { id: 3, reps: 0, weight: 0, completed: false }
-  ]);
+  const [sets, setSets] = useState(exercise.sets || []);
 
-  const updateSet = (setId, field, value) => {
-    const updatedSets = sets.map(set => 
+  const updateSet = (setId: number, field: string, value: any) => {
+    const updatedSets = sets.map((set) =>
       set.id === setId ? { ...set, [field]: value } : set
     );
     setSets(updatedSets);
-    onUpdate({ sets: updatedSets });
+    onUpdate({ ...exercise, sets: updatedSets });
   };
 
-  const toggleSetComplete = (setId) => {
-    const updatedSets = sets.map(set => 
+  const toggleSetComplete = (setId: number) => {
+    const updatedSets = sets.map((set) =>
       set.id === setId ? { ...set, completed: !set.completed } : set
     );
     setSets(updatedSets);
-    onUpdate({ sets: updatedSets });
+    onUpdate({ ...exercise, sets: updatedSets });
   };
 
   const addSet = () => {
     const newSet = {
-      id: sets.length + 1,
+      id: sets.length > 0 ? Math.max(...sets.map((s) => s.id)) + 1 : 1,
       reps: 0,
       weight: 0,
-      completed: false
+      completed: false,
     };
     const updatedSets = [...sets, newSet];
     setSets(updatedSets);
-    onUpdate({ sets: updatedSets });
+    onUpdate({ ...exercise, sets: updatedSets });
   };
 
   const removeSet = () => {
     if (sets.length > 1) {
       const updatedSets = sets.slice(0, -1);
       setSets(updatedSets);
-      onUpdate({ sets: updatedSets });
+      onUpdate({ ...exercise, sets: updatedSets });
     }
   };
 
-  const completedSets = sets.filter(set => set.completed).length;
+  const completedSets = sets.filter((set) => set.completed).length;
 
   return (
-    <motion.div
-      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-      style={{ width: '320px' }}
-      whileHover={{ y: -2, shadow: '0 8px 25px rgba(0,0,0,0.1)' }}
-    >
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h4 className="font-semibold text-gray-800 text-sm">{exercise.name}</h4>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {exercise.targetMuscles.map((muscle, index) => (
-                <span
-                  key={index}
+    <View className="bg-white rounded-xl border border-gray-200 shadow-sm w-80 overflow-hidden">
+      <View className="p-4">
+        {/* Header */}
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="flex-1">
+            <Text className="font-semibold text-gray-800 text-sm">{exercise.name}</Text>
+            <View className="flex-row flex-wrap gap-1 mt-1">
+              {exercise.targetMuscles.map((muscle, idx) => (
+                <Text
+                  key={idx}
                   className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full"
                 >
                   {muscle}
-                </span>
+                </Text>
               ))}
-            </div>
-          </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            </View>
+          </View>
+          <Pressable
+            onPress={() => setShowForm(!showForm)}
+            className="p-1 rounded-full"
           >
-            <Info className="w-4 h-4 text-gray-500" />
-          </button>
-        </div>
+            <Info size={16} className="text-gray-500" />
+          </Pressable>
+        </View>
 
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
-            <span>Progress: {completedSets}/{sets.length} sets</span>
-            <span>{Math.round((completedSets / sets.length) * 100)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div
-              className="bg-gradient-to-r from-green-400 to-green-600 h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${(completedSets / sets.length) * 100}%` }}
+        {/* Progress Bar */}
+        <View className="mb-4">
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-xs text-gray-600">
+              Progress: {completedSets}/{sets.length} sets
+            </Text>
+            <Text className="text-xs text-gray-600">
+              {sets.length > 0 ? Math.round((completedSets / sets.length) * 100) : 0}%
+            </Text>
+          </View>
+          <View className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+            <View
+              className="bg-green-500 h-1.5 rounded-full"
+              style={{ width: `${(completedSets / sets.length) * 100 || 0}%` }}
             />
-          </div>
-        </div>
+          </View>
+        </View>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-700">Sets & Reps</span>
-            <div className="flex gap-1">
-              <button
-                onClick={removeSet}
-                className="p-1 rounded-full hover:bg-red-100 text-red-600 transition-colors"
-                disabled={sets.length <= 1}
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-              <button
-                onClick={addSet}
-                className="p-1 rounded-full hover:bg-green-100 text-green-600 transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-          
+        {/* Set Controls */}
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-xs font-medium text-gray-700">Sets & Reps</Text>
+          <View className="flex-row gap-1">
+            <Pressable
+              onPress={removeSet}
+              disabled={sets.length <= 1}
+              className="p-1 rounded-full bg-red-100 disabled:opacity-50"
+            >
+              <Minus size={12} className="text-red-600" />
+            </Pressable>
+            <Pressable
+              onPress={addSet}
+              className="p-1 rounded-full bg-green-100"
+            >
+              <Plus size={12} className="text-green-600" />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Sets */}
+        <View className="space-y-2">
           {sets.map((set, index) => (
-            <div key={set.id} className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-6">{index + 1}</span>
-              <input
-                type="number"
+            <View key={set.id} className="flex-row items-center gap-2">
+              <Text className="text-xs text-gray-500 w-5">{index + 1}</Text>
+              <TextInput
+                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded"
+                keyboardType="numeric"
                 placeholder="Reps"
-                value={set.reps || ''}
-                onChange={(e) => updateSet(set.id, 'reps', parseInt(e.target.value) || 0)}
-                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:border-blue-500 focus:outline-none"
+                value={String(set.reps)}
+                onChangeText={(val) => updateSet(set.id, 'reps', parseInt(val) || 0)}
               />
-              <span className="text-xs text-gray-400">×</span>
-              <input
-                type="number"
+              <Text className="text-xs text-gray-400">×</Text>
+              <TextInput
+                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded"
+                keyboardType="numeric"
                 placeholder="lbs"
-                value={set.weight || ''}
-                onChange={(e) => updateSet(set.id, 'weight', parseInt(e.target.value) || 0)}
-                className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:border-blue-500 focus:outline-none"
+                value={String(set.weight)}
+                onChangeText={(val) => updateSet(set.id, 'weight', parseInt(val) || 0)}
               />
-              <button
-                onClick={() => toggleSetComplete(set.id)}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+              <Pressable
+                onPress={() => toggleSetComplete(set.id)}
+                className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
                   set.completed
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-gray-300 hover:border-green-400'
+                    ? 'bg-green-500 border-green-500'
+                    : 'border-gray-300'
                 }`}
               >
-                {set.completed && <span className="text-xs">✓</span>}
-              </button>
-            </div>
+                {set.completed && (
+                  <Text className="text-white text-xs">✓</Text>
+                )}
+              </Pressable>
+            </View>
           ))}
-        </div>
-      </div>
+        </View>
+      </View>
 
+      {/* Exercise Form */}
       {showForm && (
-        <ExerciseForm
-          exercise={exercise}
-          onClose={() => setShowForm(false)}
-        />
+        <View className="p-4 bg-gray-50 border-t border-gray-200">
+          <Text className="text-sm text-gray-600">Exercise form would be displayed here.</Text>
+        </View>
       )}
-    </motion.div>
+    </View>
   );
 };
 

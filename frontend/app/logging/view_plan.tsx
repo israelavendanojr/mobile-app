@@ -1,10 +1,10 @@
-import ViewPlans from '../../screens/logging/ViewPlans';
+import PlanOverview from '../../screens/logging/PlanOverview';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
-export default function ViewPlansRoute() {
+export default function PlanOverviewRoute() {
   return (
     <ProtectedRoute>
-      <ViewPlans />
+      <PlanOverview />
     </ProtectedRoute>
   );
 }
